@@ -5,6 +5,8 @@ config.toml (em ~/.config/ficha/ ou %APPDATA%\\ficha\\), tudo opcional:
     idioma = "pt"              # "pt" ou "en"; sem isso, segue o idioma do sistema
     porta = 7373
     lan = false                # painel acessível pela rede local
+    fechar_steam = false       # fecha a Steam quando ela agarra um controle (sem jogo dela aberto)
+    hidhide = false            # Windows: configura o HidHide sozinho
     [caminhos]
     fightcade = "/caminho/do/Fightcade"   # pasta de instalação (nativo) ou de dados (flatpak)
     steam = "/caminho/da/Steam"           # a pasta que tem steamapps/
