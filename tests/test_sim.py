@@ -4,7 +4,7 @@ Usa teclado falso: um teclado virtual de verdade digitaria na janela em foco.
 """
 import os, sys, tempfile, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from ficha import linux_input as li
+from ficha.platform import linux as li
 from ficha.core import Hub
 from ficha.games import GAMES
 from ficha.profiles import KEYMAP, ProfileStore

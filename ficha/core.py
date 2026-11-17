@@ -1,18 +1,18 @@
-"""Hub: controles físicos -> teclado virtual com teclas fixas de P1/P2.
+"""Hub: controles físicos -> saídas virtuais fixas de P1/P2.
 
-O FBNeo identifica joystick por índice, que muda com a ordem de plugar (e o
-wine ainda lê DS4 por hidraw, então dá pra esconder nada dele). Traduzindo tudo
-para teclas fixas, a config do jogo nunca muda e quem decide quem é P1/P2 é o hub.
+Jogos e emuladores costumam identificar controle por índice, que muda com a
+ordem de plugar. O hub lê os controles físicos e sai sempre pelos mesmos
+dispositivos virtuais (teclado com teclas fixas, ou dois controles "ficha P1/P2"),
+então a config do jogo nunca muda e quem decide quem é P1/P2 é o hub.
 """
 
 import collections
 import errno
-import os
-import select
 import threading
 import time
 
-from . import linux_input as li
+from . import codes as ev
+from . import platform as platform_mod
 from .games import DEFAULT_GAME, GAMES, VPAD_OUT
 from .profiles import (ALL_KEYS, DEFAULT_DIRECTIONS, DIRECTION_SOURCES, KEYMAP, ProfileStore,
                        device_identity, layout_to_mapping, mapping_to_layout, model_key, positions)
@@ -22,16 +22,7 @@ COMBO_REMAP = 2.0         # START+COIN segurados por isso: entra no mapeamento
 WIZARD_TIMEOUT = 45.0
 SKIPPABLE = {"coin"}      # apertar START de novo pula
 
-HAT_CODES = range(li.ABS_HAT0X, 0x18)
-
-# Controles virtuais pro Flycast: layout de controle Xbox, ID próprio (pid.codes)
-# pra dar pra esconder do Flycast todo o resto.
-VPAD_NAMES = ("ficha P1", "ficha P2")
-VPAD_BTNS = [0x130, 0x131, 0x133, 0x134, 0x136, 0x137, 0x13A, 0x13B, 0x13C, 0x13D, 0x13E]
-VPAD_ABS = {li.ABS_X: (-32768, 32767), li.ABS_Y: (-32768, 32767), li.ABS_Z: (0, 255),
-            li.ABS_RX: (-32768, 32767), li.ABS_RY: (-32768, 32767), li.ABS_RZ: (0, 255),
-            li.ABS_HAT0X: (-1, 1), li.ABS_HAT0Y: (-1, 1)}
-OWN_DEVICES = {"ficha teclado virtual"} | set(VPAD_NAMES)
+HAT_CODES = ev.HAT_CODES
 
 
 def parse_source(src):
@@ -44,12 +35,12 @@ def parse_source(src):
 class Pad:
     def __init__(self, dev, store):
         self.dev = dev
-        self.key = os.path.basename(dev.path)
+        self.key = dev.key
         self.pid, self.unique = device_identity(dev)
         self.model = model_key(dev)
         self.player = store.controller(self.pid).get("jogador", "")
-        # Apelido: o nome que o driver dá nem sempre é o do aparelho (a Scoutbox
-        # se apresenta como "Mad Catz Xbox 360 Controller").
+        # Apelido: o nome que o driver dá nem sempre é o do aparelho (uma box
+        # com placa genérica pode se apresentar como "Mad Catz Xbox 360 Controller").
         self.alias = store.controller(self.pid).get("apelido", "")
         self.mapping, self.kind = None, None   # o Hub resolve conforme jogo e jogador
         self.keys = dev.pressed_keys()
@@ -102,7 +93,7 @@ class Pad:
         """Fontes não-direcionais ativas agora (usado no mapeamento)."""
         out = ["k:%d" % c for c in sorted(self.keys) if "k:%d" % c not in DIRECTION_SOURCES]
         for code in self.dev.absinfo:
-            if code in HAT_CODES or code in (li.ABS_X, li.ABS_Y):
+            if code in HAT_CODES or code in (ev.ABS_X, ev.ABS_Y):
                 continue
             for sign, ch in ((1, "+"), (-1, "-")):
                 if self.active("a", code, sign):
@@ -160,7 +151,8 @@ class Wizard:
 
 
 class Hub:
-    def __init__(self, store=None, keyboard=True):
+    def __init__(self, store=None, keyboard=True, plat=None):
+        self.plat = plat or platform_mod.current()
         self.store = store or ProfileStore()
         self.pads = {}
         self.slots = [None, None]
@@ -171,10 +163,8 @@ class Hub:
         self.version = 0
         self.events = collections.deque(maxlen=25)
         self.game = GAMES.get(self.store.data.get("ultimo_jogo")) or GAMES[DEFAULT_GAME]
-        self.kb = li.UInput("ficha teclado virtual", ALL_KEYS) if keyboard else None
-        # P1 criado antes do P2: eventN menor, então índice SDL 0 no Flycast.
-        self.vpads = [li.UInput(n, VPAD_BTNS, VPAD_ABS, vendor=0x1209, product=0xF1C5)
-                      for n in VPAD_NAMES] if keyboard else [None, None]
+        self.kb = self.plat.make_keyboard(ALL_KEYS) if keyboard else None
+        self.vpads = self.plat.make_vpads() if keyboard else [None, None]
         self.running = False
         self._last_scan = 0
         # Só manda tecla/botão pro sistema com o jogo aberto: com ele fechado, o
@@ -203,40 +193,8 @@ class Hub:
             self.log("%s agora se chama %s" % (pad.dev.name, pad.name))
 
     def scan(self):
-        try:
-            names = [n for n in os.listdir("/dev/input") if n.startswith("event")]
-        except OSError:
-            return
-        present = set()
-        for n in names:
-            path = "/dev/input/" + n
-            present.add(path)
-            if n in self.pads:
-                continue
-            try:
-                st = os.stat(path)
-            except OSError:
-                continue
-            stamp = (st.st_ino, st.st_ctime_ns)
-            if self.ignored.get(path) == stamp:
-                continue
-            try:
-                dev = li.InputDevice(path)
-            except OSError:
-                # Sem permissão (teclado, mouse...) ou sumiu no meio. Joysticks
-                # ganham ACL pelo uaccess do systemd; se aparecer depois, o stamp muda.
-                self.ignored[path] = stamp
-                continue
-            # Ignora os próprios virtuais e o controle virtual do Steam Input
-            # (28de:11ff), que espelha um controle físico que já estamos lendo.
-            if not dev.is_gamepad or dev.name in OWN_DEVICES or (dev.vendor, dev.product) == (0x28DE, 0x11FF):
-                dev.close()
-                self.ignored[path] = stamp
-                continue
+        for dev in self.plat.discover(set(self.pads)):
             self.add_pad(dev)
-        for path in list(self.ignored):
-            if path not in present:
-                del self.ignored[path]
         # Outro programa (a Steam, com o Steam Input) pode ter agarrado o
         # controle antes: aí os botões só vão pra ele. Tenta de novo até soltar.
         for pad in self.pads.values():
@@ -298,22 +256,22 @@ class Hub:
         for kind, code in sorted(held - desired) + sorted(desired - held):
             on = (kind, code) in desired
             if kind == "key" and kb:
-                kb.emit(li.EV_KEY, code, int(on), syn=False)
+                kb.emit(ev.EV_KEY, code, int(on), syn=False)
                 touched.add(kb)
             elif kind == "btn" and pad:
-                pad.emit(li.EV_KEY, code, int(on), syn=False)
+                pad.emit(ev.EV_KEY, code, int(on), syn=False)
                 touched.add(pad)
             elif kind == "axis" and pad:
-                pad.emit(li.EV_ABS, code, 255 if on else 0, syn=False)
+                pad.emit(ev.EV_ABS, code, self.plat.trigger_max if on else 0, syn=False)
                 touched.add(pad)
         if pad and any(k == "hat" for k, _ in held ^ desired):
             hx = (("hat", "right") in desired) - (("hat", "left") in desired)
             hy = (("hat", "down") in desired) - (("hat", "up") in desired)
-            pad.emit(li.EV_ABS, li.ABS_HAT0X, hx, syn=False)
-            pad.emit(li.EV_ABS, li.ABS_HAT0Y, hy, syn=False)
+            pad.emit(ev.EV_ABS, ev.ABS_HAT0X, hx, syn=False)
+            pad.emit(ev.EV_ABS, ev.ABS_HAT0Y, hy, syn=False)
             touched.add(pad)
         for dev in touched:
-            dev.emit(li.EV_SYN, li.SYN_REPORT, 0, syn=False)
+            dev.emit(ev.EV_SYN, ev.SYN_REPORT, 0, syn=False)
         self.held[slot] = desired
 
     def _release_slot(self, slot):
@@ -564,17 +522,14 @@ class Hub:
             with self.lock:
                 self.scan()
             self._last_scan = now
-        fds = {p.dev.fd: p for p in self.pads.values()}
+        by_dev = {id(p.dev): p for p in self.pads.values()}
         busy = any(p.combo_since is not None or p.wizard is not None for p in self.pads.values())
-        try:
-            ready, _, _ = select.select(list(fds), [], [], min(timeout, 0.05) if busy else timeout)
-        except (OSError, ValueError):
-            ready = []
+        ready = self.plat.wait([p.dev for p in self.pads.values()], min(timeout, 0.05) if busy else timeout)
         with self.lock:
             now = time.monotonic()
-            for fd in ready:
-                pad = fds[fd]
-                if pad.key not in self.pads:
+            for dev in ready:
+                pad = by_dev.get(id(dev))
+                if pad is None or pad.key not in self.pads:
                     continue
                 try:
                     events = pad.dev.read()
@@ -584,17 +539,17 @@ class Hub:
                         continue
                     raise
                 for type_, code, value in events:
-                    if type_ == li.EV_KEY:
+                    if type_ == ev.EV_KEY:
                         if value:
                             pad.keys.add(code)
                         else:
                             pad.keys.discard(code)
-                    elif type_ == li.EV_ABS:
+                    elif type_ == ev.EV_ABS:
                         pad.abs[code] = value
-                    elif type_ == li.EV_SYN:
-                        if code == li.SYN_DROPPED:
+                    elif type_ == ev.EV_SYN:
+                        if code == ev.SYN_DROPPED:
                             pad.resync = True
-                        elif code == li.SYN_REPORT:
+                        elif code == ev.SYN_REPORT:
                             self._frame(pad, now)
             self._tick(now)
 

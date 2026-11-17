@@ -1,4 +1,4 @@
-"""evdev e uinput na mão, só com a stdlib (fcntl/struct/os).
+"""Plataforma Linux: evdev e uinput na mão, só com a stdlib (fcntl/struct/os).
 
 Evita depender de python-evdev: a máquina da jogatina só precisa de Python.
 Constantes de /usr/include/linux/input.h, input-event-codes.h e uinput.h.
@@ -7,6 +7,7 @@ Constantes de /usr/include/linux/input.h, input-event-codes.h e uinput.h.
 import array
 import fcntl
 import os
+import select
 import struct
 
 # --- ioctl -------------------------------------------------------------------
@@ -57,23 +58,8 @@ def UI_GET_SYSNAME(n): return _IOC(_IOC_READ, "U", 44, n)
 
 # --- códigos -----------------------------------------------------------------
 
-EV_SYN, EV_KEY, EV_ABS = 0x00, 0x01, 0x03
-SYN_REPORT, SYN_DROPPED = 0, 3
-INPUT_PROP_ACCELEROMETER = 0x06
-
-ABS_X, ABS_Y, ABS_Z, ABS_RX, ABS_RY, ABS_RZ = 0x00, 0x01, 0x02, 0x03, 0x04, 0x05
-ABS_HAT0X, ABS_HAT0Y = 0x10, 0x11
-ABS_MAX = 0x3F
-
-BTN_JOYSTICK = 0x120  # BTN_TRIGGER
-BTN_SOUTH, BTN_EAST, BTN_C = 0x130, 0x131, 0x132
-BTN_NORTH, BTN_WEST, BTN_Z = 0x133, 0x134, 0x135  # BTN_X == BTN_NORTH, BTN_Y == BTN_WEST
-BTN_TL, BTN_TR, BTN_TL2, BTN_TR2 = 0x136, 0x137, 0x138, 0x139
-BTN_SELECT, BTN_START, BTN_MODE = 0x13A, 0x13B, 0x13C
-BTN_THUMBL, BTN_THUMBR = 0x13D, 0x13E
-BTN_DPAD_UP, BTN_DPAD_DOWN, BTN_DPAD_LEFT, BTN_DPAD_RIGHT = 0x220, 0x221, 0x222, 0x223
-BTN_TRIGGER_HAPPY1, BTN_TRIGGER_HAPPY40 = 0x2C0, 0x2E7
-KEY_MAX = 0x2FF
+from ..codes import *  # noqa: F401,F403 (os códigos são a língua comum)
+from ..codes import AbsInfo
 
 # input_event em 64 bits: timeval(16) + type u16 + code u16 + value s32
 EVENT = struct.Struct("llHHi")
@@ -96,11 +82,8 @@ def _ioctl_str(fd, req_fn, n=256):
         return ""
 
 
-class AbsInfo:
-    __slots__ = ("value", "min", "max", "fuzz", "flat", "res")
-
-    def __init__(self, raw):
-        self.value, self.min, self.max, self.fuzz, self.flat, self.res = struct.unpack("6i", raw)
+def _absinfo(raw):
+    return AbsInfo(*struct.unpack("6i", raw))
 
 
 def _sysfs_info(event_path):
@@ -144,11 +127,12 @@ class InputDevice:
             self.absinfo = {}
             for code in range(ABS_MAX + 1):
                 if _test_bit(self.abs_bits, code):
-                    self.absinfo[code] = AbsInfo(bytes(_ioctl_buf(self.fd, EVIOCGABS(code), 24)))
+                    self.absinfo[code] = _absinfo(bytes(_ioctl_buf(self.fd, EVIOCGABS(code), 24)))
             self.driver, self.serial = _sysfs_info(path)
         except Exception:
             os.close(self.fd)
             raise
+        self.key = os.path.basename(path)   # chave estável enquanto plugado
         self.grabbed = False
         self._partial = b""
 
@@ -171,7 +155,7 @@ class InputDevice:
         out = {}
         for code in self.absinfo:
             try:
-                out[code] = AbsInfo(bytes(_ioctl_buf(self.fd, EVIOCGABS(code), 24))).value
+                out[code] = _absinfo(bytes(_ioctl_buf(self.fd, EVIOCGABS(code), 24))).value
             except OSError:
                 pass
         return out
@@ -249,3 +233,79 @@ class UInput:
         except OSError:
             pass
         os.close(self.fd)
+
+
+# --- a plataforma -------------------------------------------------------------
+
+KEYBOARD_NAME = "ficha teclado virtual"
+# Controles virtuais: layout de controle Xbox com ID próprio (pid.codes 1209:f1c5),
+# pra dar pra esconder dos jogos (via SDL) todo o resto.
+VPAD_NAMES = ("ficha P1", "ficha P2")
+VPAD_ID = (0x1209, 0xF1C5)
+VPAD_BTNS = [0x130, 0x131, 0x133, 0x134, 0x136, 0x137, 0x13A, 0x13B, 0x13C, 0x13D, 0x13E]
+VPAD_ABS = {ABS_X: (-32768, 32767), ABS_Y: (-32768, 32767), ABS_Z: (0, 255),
+            ABS_RX: (-32768, 32767), ABS_RY: (-32768, 32767), ABS_RZ: (0, 255),
+            ABS_HAT0X: (-1, 1), ABS_HAT0Y: (-1, 1)}
+OWN_DEVICES = {KEYBOARD_NAME} | set(VPAD_NAMES)
+STEAM_VIRTUAL = (0x28DE, 0x11FF)   # controle virtual do Steam Input: espelha um físico
+
+
+class LinuxPlatform:
+    name = "linux"
+    trigger_max = 255
+
+    def __init__(self, input_dir="/dev/input"):
+        self.input_dir = input_dir
+        self.ignored = {}
+
+    def make_keyboard(self, keys):
+        return UInput(KEYBOARD_NAME, keys)
+
+    def make_vpads(self):
+        # P1 criado antes do P2: eventN menor, então índice SDL 0.
+        return [UInput(n, VPAD_BTNS, VPAD_ABS, vendor=VPAD_ID[0], product=VPAD_ID[1]) for n in VPAD_NAMES]
+
+    def discover(self, known):
+        """Controles novos (já abertos), fora os de chave em 'known'."""
+        try:
+            names = [n for n in os.listdir(self.input_dir) if n.startswith("event")]
+        except OSError:
+            return []
+        found, present = [], set()
+        for n in names:
+            path = os.path.join(self.input_dir, n)
+            present.add(path)
+            if n in known:
+                continue
+            try:
+                st = os.stat(path)
+            except OSError:
+                continue
+            stamp = (st.st_ino, st.st_ctime_ns)
+            if self.ignored.get(path) == stamp:
+                continue
+            try:
+                dev = InputDevice(path)
+            except OSError:
+                # Sem permissão (teclado, mouse...) ou sumiu no meio. Joysticks
+                # ganham ACL pelo uaccess do systemd; se aparecer depois, o stamp muda.
+                self.ignored[path] = stamp
+                continue
+            if not dev.is_gamepad or dev.name in OWN_DEVICES or (dev.vendor, dev.product) == STEAM_VIRTUAL:
+                dev.close()
+                self.ignored[path] = stamp
+                continue
+            found.append(dev)
+        for path in list(self.ignored):
+            if path not in present:
+                del self.ignored[path]
+        return found
+
+    def wait(self, devices, timeout):
+        """Os dispositivos com eventos pendentes, esperando até 'timeout' segundos."""
+        fds = {d.fd: d for d in devices}
+        try:
+            ready, _, _ = select.select(list(fds), [], [], timeout)
+        except (OSError, ValueError):
+            return []
+        return [fds[fd] for fd in ready]

@@ -15,17 +15,17 @@ import os
 import tempfile
 import time
 
-from . import linux_input as li
+from . import codes as ev
 
 DIRECTIONS = ["up", "down", "left", "right"]
 
 # Direcional sempre aceito, venha de onde vier: hat (D-pad do xpad/DS4/GP2040),
 # analógico esquerdo, ou D-pad reportado como botões.
 DEFAULT_DIRECTIONS = {
-    "up": ["a:%d:-" % li.ABS_HAT0Y, "a:%d:-" % li.ABS_Y, "k:%d" % li.BTN_DPAD_UP],
-    "down": ["a:%d:+" % li.ABS_HAT0Y, "a:%d:+" % li.ABS_Y, "k:%d" % li.BTN_DPAD_DOWN],
-    "left": ["a:%d:-" % li.ABS_HAT0X, "a:%d:-" % li.ABS_X, "k:%d" % li.BTN_DPAD_LEFT],
-    "right": ["a:%d:+" % li.ABS_HAT0X, "a:%d:+" % li.ABS_X, "k:%d" % li.BTN_DPAD_RIGHT],
+    "up": ["a:%d:-" % ev.ABS_HAT0Y, "a:%d:-" % ev.ABS_Y, "k:%d" % ev.BTN_DPAD_UP],
+    "down": ["a:%d:+" % ev.ABS_HAT0Y, "a:%d:+" % ev.ABS_Y, "k:%d" % ev.BTN_DPAD_DOWN],
+    "left": ["a:%d:-" % ev.ABS_HAT0X, "a:%d:-" % ev.ABS_X, "k:%d" % ev.BTN_DPAD_LEFT],
+    "right": ["a:%d:+" % ev.ABS_HAT0X, "a:%d:+" % ev.ABS_X, "k:%d" % ev.BTN_DPAD_RIGHT],
 }
 DIRECTION_SOURCES = {s for v in DEFAULT_DIRECTIONS.values() for s in v}
 
@@ -33,7 +33,9 @@ DIRECTION_SOURCES = {s for v in DEFAULT_DIRECTIONS.values() for s in v}
 # O xpad é a exceção histórica: reporta o X do Xbox (posição oeste) como BTN_X,
 # que tem o mesmo valor de BTN_NORTH. A família PlayStation segue a norma.
 XPAD_DRIVERS = {"xpad", "xone"}
-POSITIONAL_DRIVERS = XPAD_DRIVERS | {"playstation", "sony", "xpadneo", "hid-microsoft", "microsoft"}
+# "sdl-gamecontroller" é o Windows: o SDL já entrega os botões por posição.
+POSITIONAL_DRIVERS = XPAD_DRIVERS | {"playstation", "sony", "xpadneo", "hid-microsoft", "microsoft",
+                                     "sdl-gamecontroller"}
 SYSTEM_LAYOUT = {"start": "start", "coin": "select"}
 
 # Teclado virtual: P1 e P2 em blocos que não colidem com atalhos do FBNeo (F1-F12,
@@ -71,12 +73,12 @@ def model_key(dev):
 
 def positions(dev):
     """Posição física -> fonte crua, ou None se o driver não for confiável."""
-    if dev.driver not in POSITIONAL_DRIVERS or not (dev.has_key(li.BTN_SOUTH) and dev.has_key(li.BTN_EAST)):
+    if dev.driver not in POSITIONAL_DRIVERS or not (dev.has_key(ev.BTN_SOUTH) and dev.has_key(ev.BTN_EAST)):
         return None
     if dev.driver in XPAD_DRIVERS:
-        west, north = li.BTN_NORTH, li.BTN_WEST
+        west, north = ev.BTN_NORTH, ev.BTN_WEST
     else:
-        west, north = li.BTN_WEST, li.BTN_NORTH
+        west, north = ev.BTN_WEST, ev.BTN_NORTH
 
     def trigger(btn, axis):
         if dev.has_key(btn):
@@ -85,11 +87,11 @@ def positions(dev):
             return "a:%d:+" % axis
         return None
 
-    pos = {"west": "k:%d" % west, "north": "k:%d" % north, "south": "k:%d" % li.BTN_SOUTH,
-           "east": "k:%d" % li.BTN_EAST, "r1": "k:%d" % li.BTN_TR, "l1": "k:%d" % li.BTN_TL,
-           "r2": trigger(li.BTN_TR2, li.ABS_RZ), "l2": trigger(li.BTN_TL2, li.ABS_Z),
-           "start": "k:%d" % li.BTN_START, "select": "k:%d" % li.BTN_SELECT,
-           "l3": "k:%d" % li.BTN_THUMBL, "r3": "k:%d" % li.BTN_THUMBR}
+    pos = {"west": "k:%d" % west, "north": "k:%d" % north, "south": "k:%d" % ev.BTN_SOUTH,
+           "east": "k:%d" % ev.BTN_EAST, "r1": "k:%d" % ev.BTN_TR, "l1": "k:%d" % ev.BTN_TL,
+           "r2": trigger(ev.BTN_TR2, ev.ABS_RZ), "l2": trigger(ev.BTN_TL2, ev.ABS_Z),
+           "start": "k:%d" % ev.BTN_START, "select": "k:%d" % ev.BTN_SELECT,
+           "l3": "k:%d" % ev.BTN_THUMBL, "r3": "k:%d" % ev.BTN_THUMBR}
     return {p: s for p, s in pos.items() if s and (s[0] == "a" or dev.has_key(int(s.split(":")[1])))}
 
 
