@@ -24,9 +24,23 @@ class GameError(ValueError):
     pass
 
 
+TOP_KEYS = {"id", "title", "short", "year", "accent", "training", "optional", "grid", "backend",
+            "buttons", "layout", "macros", "system"}
+BUTTON_KEYS = {"id", "short", "name", "target"}
+
+
 class Game:
     def __init__(self, data, source):
         self.source = source
+        extra = set(data) - TOP_KEYS
+        if extra:
+            raise GameError("%s: chave desconhecida %s (no TOML, chaves soltas depois de uma "
+                            "[[buttons]] entram nesse botão: ponha-as antes)" % (source, sorted(extra)))
+        for b in data.get("buttons", []):
+            extra = set(b) - BUTTON_KEYS
+            if extra:
+                raise GameError("%s: botão '%s' com chave desconhecida %s (chave solta depois de "
+                                "[[buttons]]? ponha-a antes do primeiro [[buttons]])" % (source, b.get("id"), sorted(extra)))
         try:
             self.id = data["id"]
             self.title = data["title"]

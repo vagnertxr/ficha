@@ -9,6 +9,9 @@ short = "MvC2"
 year = 2000
 accent = "#a274ff"
 
+# Gabinete: LP HP A1 em cima, LK HK A2 embaixo
+grid = [["lp", "hp", "a1"], ["lk", "hk", "a2"]]
+
 [backend]
 type = "flycast-fightcade"
 files = ["Marvel vs. Capcom 2.cdi", "Marvel vs. Capcom 2 (USA).chd"]
@@ -51,8 +54,6 @@ short = "A2"
 name = { pt = "Parceiro B", en = "Assist 2" }
 target = "rt"
 
-# Gabinete: LP HP A1 em cima, LK HK A2 embaixo
-grid = [["lp", "hp", "a1"], ["lk", "hk", "a2"]]
 
 [layout]
 lp = "west"

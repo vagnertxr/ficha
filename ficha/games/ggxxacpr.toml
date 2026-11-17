@@ -18,6 +18,9 @@ year = 2012
 accent = "#ff3d4a"
 optional = ["respect"]
 
+# Gabinete: P S HS em cima, K D embaixo
+grid = [["p", "s", "hs"], ["k", "d", "respect"]]
+
 [backend]
 type = "steam"
 appid = 348550
@@ -65,8 +68,6 @@ short = "R"
 name = { pt = "Respect (provocação)", en = "Respect (taunt)" }
 target = "rt"
 
-# Gabinete: P S HS em cima, K D embaixo
-grid = [["p", "s", "hs"], ["k", "d", "respect"]]
 
 [layout]
 p = "west"

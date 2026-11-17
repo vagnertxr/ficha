@@ -9,6 +9,9 @@ year = 1999
 accent = "#ff9f1a"
 training = true
 
+# Como aparece no painel: fileira de cima, fileira de baixo (gabinete de 6 botões)
+grid = [["lp", "mp", "hp"], ["lk", "mk", "hk"]]
+
 [backend]
 type = "fbneo-fightcade"
 rom = "sfiii3nr1"
@@ -51,8 +54,6 @@ short = "HK"
 name = { pt = "Chute forte", en = "Heavy Kick" }
 target = "Strong Kick"
 
-# Como aparece no painel: fileira de cima, fileira de baixo (gabinete de 6 botões)
-grid = [["lp", "mp", "hp"], ["lk", "mk", "hk"]]
 
 # Layout padrão por posição física (soco em cima, chute embaixo)
 [layout]
