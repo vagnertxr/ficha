@@ -1,0 +1,17 @@
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/
+.venv/
+# Artes de jogo são material com copyright: ficam na config de cada usuário
+ficha/art/
+art/
+# Dados pessoais e notas locais
+perfis.json
+NOTAS-*.md
+# ROMs nunca entram no repositório
+*.zip
+*.cdi
+*.chd
+*.iso

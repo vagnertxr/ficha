@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ficha</title>
+<style>
+:root {
+  --bg: #0b0b0f; --panel: #14151b; --panel2: #1b1c24; --line: #2a2c37; --text: #f1efe9; --muted: #8d8f9c; --faint: #5d5f6c;
+  --p1: #ff4d3d; --p2: #3d8bff; --ok: #4fd17a; --warn: #ffb547; --accent: #ffd34d;
+  --display: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.45 var(--display); }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; border: 1px solid var(--line); background: var(--panel2); border-radius: 10px; padding: 9px 14px; font-weight: 650; }
+button:hover { border-color: #444756; background: #232530; }
+button:disabled { opacity: .45; cursor: not-allowed; }
+button.small { padding: 5px 10px; font-size: 13px; border-radius: 8px; }
+button.danger { color: #ff8f84; }
+.wrap { max-width: 1240px; margin: 0 auto; padding: 0 20px; }
+
+/* --- topo ------------------------------------------------------------------ */
+.top { display: flex; align-items: center; gap: 14px; padding: 16px 0; }
+.logo { display: flex; align-items: center; gap: 10px; font-weight: 900; font-size: 22px; letter-spacing: -.02em; margin-right: auto; }
+.coin { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff3b0, #ffcc33 45%, #b8860b 100%);
+  box-shadow: inset 0 0 0 3px rgba(0,0,0,.18), 0 0 18px rgba(255,204,51,.35); display: grid; place-items: center; color: #6b4b00; font-size: 13px; font-weight: 900; }
+.pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 99px; background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08); color: var(--muted); font-size: 13px; font-weight: 600; backdrop-filter: blur(8px); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.dot.on { background: var(--ok); box-shadow: 0 0 10px var(--ok); animation: blink 1.6s infinite; }
+@keyframes blink { 50% { opacity: .45; } }
+
+/* --- herói do jogo --------------------------------------------------------- */
+.hero { position: relative; overflow: hidden; border-bottom: 1px solid var(--line); }
+.hero .backdrop { position: absolute; inset: -40px; background-size: cover; background-position: center;
+  filter: blur(36px) saturate(1.3) brightness(.42); transform: scale(1.1); }
+.hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(11,11,15,.2) 0%, rgba(11,11,15,.55) 60%, var(--bg) 100%); }
+.hero .wrap { position: relative; z-index: 1; }
+.stage { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 36px; align-items: center; padding: 18px 0 30px; }
+.art { position: relative; aspect-ratio: 4 / 3; border-radius: 16px; overflow: hidden; background: #000;
+  box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 24px 60px -20px rgba(0,0,0,.8), 0 0 60px -10px color-mix(in srgb, var(--accent) 45%, transparent); }
+.art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.art .scan { position: absolute; inset: 0; background: repeating-linear-gradient(0deg, rgba(0,0,0,.12) 0 1px, transparent 1px 3px); pointer-events: none; }
+.eyebrow { font-size: 12px; font-weight: 800; letter-spacing: .16em; text-transform: uppercase; color: var(--accent); }
+.title { font-size: clamp(30px, 4.4vw, 54px); line-height: .98; font-weight: 900; font-style: italic; letter-spacing: -.03em; margin: 10px 0 14px;
+  text-wrap: balance; text-shadow: 0 2px 30px rgba(0,0,0,.6); }
+.meta { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px; }
+.cta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.play { background: var(--accent); border-color: var(--accent); color: #140f00; font-size: 17px; font-weight: 900; padding: 13px 26px; border-radius: 12px;
+  letter-spacing: .02em; box-shadow: 0 10px 30px -10px var(--accent); }
+.play:hover { background: var(--accent); filter: brightness(1.1); border-color: var(--accent); }
+.ghost { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.12); }
+
+/* --- prateleira de jogos --------------------------------------------------- */
+.shelf { display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 22px; scrollbar-width: thin; }
+.card { flex: 0 0 196px; text-align: left; padding: 0; border-radius: 12px; overflow: hidden; background: var(--panel); border: 1px solid var(--line);
+  transition: transform .15s, border-color .15s; position: relative; }
+.card:hover:not(:disabled) { transform: translateY(-2px); }
+.card .thumb { aspect-ratio: 16 / 9; background: #000 center / cover; }
+.card .name { padding: 8px 10px 10px; font-weight: 800; font-size: 14px; }
+.card .name small { display: block; color: var(--muted); font-weight: 600; font-size: 12px; }
+.card.sel { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 24px -10px var(--c); opacity: 1; }
+.card.sel::after { content: "▶"; position: absolute; top: 8px; right: 8px; width: 24px; height: 24px; border-radius: 50%; background: var(--c); color: #111;
+  font-size: 11px; display: grid; place-items: center; }
+
+/* --- arena ----------------------------------------------------------------- */
+main { padding-bottom: 40px; }
+.arena { display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: stretch; margin-top: 8px; }
+.vs { align-self: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.vs b { font-size: 34px; font-weight: 900; font-style: italic; letter-spacing: -.04em;
+  background: linear-gradient(180deg, #fff, #8d8f9c); -webkit-background-clip: text; background-clip: text; color: transparent; }
+.slot { position: relative; overflow: hidden; border-radius: 18px; padding: 20px 22px 18px; min-height: 340px; display: flex; flex-direction: column; gap: 12px;
+  background: linear-gradient(160deg, color-mix(in srgb, var(--c) 14%, var(--panel)) 0%, var(--panel) 55%); border: 1px solid var(--line); }
+.slot::before { content: ""; position: absolute; inset: 0 0 auto 0; height: 3px; background: var(--c); box-shadow: 0 0 18px var(--c); }
+.slot.p1 { --c: var(--p1); } .slot.p2 { --c: var(--p2); }
+.tag { display: flex; align-items: baseline; gap: 10px; font-weight: 900; font-style: italic; font-size: 22px; color: var(--c); letter-spacing: -.02em; }
+.tag small { font-style: normal; font-size: 11px; letter-spacing: .14em; color: var(--muted); font-weight: 700; }
+.empty { margin: auto; text-align: center; color: var(--muted); }
+.empty big { display: block; font-size: 26px; font-weight: 900; font-style: italic; color: var(--text); opacity: .5; margin-bottom: 6px; }
+.player { font-size: 34px; font-weight: 900; font-style: italic; letter-spacing: -.03em; background: transparent; border: 0;
+  border-bottom: 2px dashed rgba(255,255,255,.12); width: 100%; padding: 0 0 2px; outline: none; }
+.player:focus { border-bottom-color: var(--c); }
+.player::placeholder { color: #4d4f5c; }
+.model { color: var(--muted); font-size: 13px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.rename { cursor: pointer; display: inline-flex; align-items: center; gap: 5px; } .rename:hover { color: var(--text); }
+.badge { font-size: 11px; font-weight: 800; padding: 3px 9px; border-radius: 99px; background: rgba(255,255,255,.07); color: var(--muted); letter-spacing: .02em; }
+.badge.custom { background: rgba(79,209,122,.14); color: var(--ok); }
+.badge.default { background: rgba(255,181,71,.14); color: var(--warn); }
+.pad { display: flex; gap: 26px; align-items: center; justify-content: center; padding: 8px 0 2px; }
+.stick { width: 96px; height: 96px; border-radius: 50%; background: radial-gradient(circle, #0b0b0f 55%, #15161d); border: 1px solid var(--line); position: relative; }
+.stick::after { content: ""; position: absolute; inset: 22px; border-radius: 50%; border: 1px dashed rgba(255,255,255,.06); }
+.stick i { position: absolute; width: 36px; height: 36px; border-radius: 50%; left: 29px; top: 29px; z-index: 1;
+  background: radial-gradient(circle at 35% 30%, #6a6d7c, #2e3039); transition: transform .04s; }
+.stick.moved i { background: radial-gradient(circle at 35% 30%, #fff, var(--c)); box-shadow: 0 0 18px var(--c); }
+.btns { display: grid; gap: 10px; }
+.btns div { width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 900;
+  color: var(--muted); background: radial-gradient(circle at 35% 30%, #262833, #121319); border: 2px solid #343745; }
+.btns div.on { background: radial-gradient(circle at 35% 30%, #fff, var(--c) 60%); border-color: var(--c); color: #fff; box-shadow: 0 0 22px var(--c);
+  text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.btns div.next { border-color: var(--accent); color: var(--text); animation: pulse .9s infinite; }
+.btns div.done { border-color: var(--ok); color: var(--ok); }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px color-mix(in srgb, var(--accent) 22%, transparent); } }
+.sys { display: flex; gap: 8px; justify-content: center; }
+.sys span { font-size: 10px; font-weight: 900; letter-spacing: .1em; padding: 4px 12px; border-radius: 99px; border: 1px solid #343745; color: var(--muted); }
+.sys span.on { background: var(--c); color: #fff; border-color: var(--c); box-shadow: 0 0 14px var(--c); }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: auto; }
+.wizard { background: rgba(0,0,0,.35); border: 1px solid var(--accent); border-radius: 14px; padding: 14px; text-align: center; }
+.wizard .ask { font-size: 26px; font-weight: 900; font-style: italic; letter-spacing: -.02em; }
+.wizard .hint { color: var(--muted); font-size: 13px; }
+.wizard .msg { color: var(--warn); font-size: 13px; min-height: 1.4em; }
+.bar { height: 5px; background: rgba(255,255,255,.08); border-radius: 99px; overflow: hidden; margin: 8px 0; }
+.bar i { display: block; height: 100%; background: var(--accent); }
+
+/* --- rodapé ---------------------------------------------------------------- */
+h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .16em; color: var(--muted); margin: 30px 0 10px; font-weight: 800; }
+.cols { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.bench { display: flex; flex-direction: column; gap: 8px; }
+.row { display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; flex-wrap: wrap; }
+.row .who { font-weight: 800; margin-right: auto; }
+.row .who small { color: var(--muted); font-weight: 500; margin-left: 6px; }
+.log { color: var(--muted); font-size: 13px; display: grid; gap: 3px; }
+.log time { color: var(--faint); margin-right: 8px; font-variant-numeric: tabular-nums; }
+.help { display: flex; gap: 10px; flex-wrap: wrap; }
+.help span { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; color: var(--muted); font-size: 13px; }
+kbd { font: 800 11px var(--display); background: #2a2c37; padding: 2px 7px; border-radius: 5px; color: var(--text); letter-spacing: .04em; }
+.warnbox { background: rgba(255,181,71,.1); border: 1px solid rgba(255,181,71,.4); color: var(--warn); border-radius: 12px; padding: 10px 14px; margin: 16px 0 0;
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.foot { display: flex; justify-content: space-between; align-items: center; margin-top: 28px; color: var(--faint); font-size: 12px; gap: 12px; flex-wrap: wrap; }
+
+@media (max-width: 860px) {
+  .stage { grid-template-columns: 1fr; gap: 18px; padding-bottom: 22px; }
+  .arena { grid-template-columns: 1fr; }
+  .vs { flex-direction: row; }
+  .cols { grid-template-columns: 1fr; }
+  .player { font-size: 28px; }
+  .wrap { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="backdrop" id="backdrop"></div>
+  <div class="wrap">
+    <div class="top">
+      <div class="logo"><span class="coin">¢</span>ficha</div>
+      <span class="pill" id="status"><span class="dot"></span>conectando…</span>
+    </div>
+    <div class="stage">
+      <div class="art"><img id="art" alt=""><div class="scan"></div></div>
+      <div>
+        <div class="eyebrow" id="eyebrow">jogo da vez</div>
+        <div class="title" id="title"></div>
+        <div class="meta" id="meta"></div>
+        <div class="cta">
+          <button class="play" id="play" onclick="api('launch',{mode:'play'})">▶ JOGAR</button>
+          <button class="ghost" id="train" onclick="api('launch',{mode:'training'})">Treino</button>
+          <button class="ghost danger" id="stop" onclick="api('stop')">Fechar jogo</button>
+        </div>
+      </div>
+    </div>
+    <div class="shelf" id="shelf"></div>
+  </div>
+</header>
+<main class="wrap">
+  <div id="warn"></div>
+  <div class="arena">
+    <section class="slot p1" id="slot0"></section>
+    <div class="vs"><b>VS</b><button class="small" onclick="api('swap')" title="Trocar P1 e P2">⇄ trocar</button></div>
+    <section class="slot p2" id="slot1"></section>
+  </div>
+  <div class="cols">
+    <div><h2>Banco</h2><div class="bench" id="bench"></div></div>
+    <div><h2>Acontecendo</h2><div class="log" id="log"></div></div>
+  </div>
+  <h2>No controle</h2>
+  <div class="help">
+    <span><kbd>START</kbd> entra num lado livre</span>
+    <span><kbd>START</kbd>+<kbd>SELECT</kbd> rapidinho: troca de lado</span>
+    <span>segura <kbd>START</kbd>+<kbd>SELECT</kbd> 2s: remapeia</span>
+  </div>
+  <div class="foot">
+    <span>ficha · pluga e joga</span>
+    <button class="small danger" onclick="if(confirm('Desligar o ficha? Os controles param de funcionar no jogo.')) api('quit')">Desligar ficha</button>
+  </div>
+</main>
+<datalist id="players"></datalist>
+<script>
+const KIND = {player: ["custom", p => "layout de " + p.player], custom: ["custom", () => "layout do controle"],
+              default: ["default", () => "layout padrão"]};
+let S = null, heroKey = "";
+const PENCIL = `<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true" style="vertical-align:-1px"><path fill="currentColor" d="M11.7 1.3a1 1 0 0 1 1.4 0l1.6 1.6a1 1 0 0 1 0 1.4l-8.9 8.9-3.6 1 1-3.6z"/></svg>`;
+
+async function api(name, body = {}) {
+  await fetch("/api/" + name, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
+}
+function esc(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
+function side(i) { return `<div class="tag">P${i + 1} <small>${i ? "LADO DIREITO" : "LADO ESQUERDO"}</small></div>`; }
+
+function padPanel(p, slot) {
+  const a = new Set(p.actions), w = p.wizard, g = S.game;
+  const dx = (a.has("right") ? 1 : 0) - (a.has("left") ? 1 : 0);
+  const dy = (a.has("down") ? 1 : 0) - (a.has("up") ? 1 : 0);
+  const short = Object.fromEntries(g.buttons.map(b => [b.id, b.short]));
+  const lit = k => a.has(k) || Object.entries(g.macros).some(([m, ids]) => a.has(m) && ids.includes(k));
+  const btns = g.grid.map(row => row.map(k => {
+    let c = lit(k) ? "on" : "";
+    if (w) { const i = w.steps.indexOf(k); c = i < w.idx ? "done" : (i === w.idx ? "next" : ""); }
+    return `<div class="${c}">${short[k]}</div>`;
+  }).join("")).join("");
+  const cols = Math.max(...g.grid.map(r => r.length));
+  const kind = KIND[p.kind] ? [KIND[p.kind][0], KIND[p.kind][1](p)] : ["", "sem mapa"];
+  const wiz = w ? `<div class="wizard">
+      <div class="hint">mapeando pro ${esc(g.short)} — passo ${w.idx + 1} de ${w.total}</div>
+      <div class="bar"><i style="width:${100 * w.idx / w.total}%"></i></div>
+      <div class="ask">Aperte ${esc(w.label)}</div>
+      <div class="msg">${esc(w.message || (w.skippable ? "ou START de novo pra pular" : ""))}</div>
+      <button class="small" onclick="api('cancel',{pad:'${p.key}'})">cancelar</button>
+    </div>` : "";
+  return side(slot) + `
+    <input class="player" data-pad="${p.key}" list="players" placeholder="quem joga?" value="${esc(p.player)}">
+    <div class="model"><span class="rename" data-pad="${p.key}" data-name="${esc(p.name)}" title="${esc(p.model)} — clique pra renomear">${esc(p.name)} ${PENCIL}</span>
+      <span class="badge ${kind[0]}">${esc(kind[1])}</span>
+      ${p.unique ? "" : `<span class="badge" title="Esse modelo não tem número de série: todos iguais compartilham o perfil">por modelo</span>`}</div>
+    ${p.grabbed ? "" : `<div class="warnbox" style="margin:0">Outro programa está segurando esse controle (geralmente a Steam, pelo Steam Input): os botões não chegam no ficha. Feche a Steam ou desligue o Steam Input pra esse tipo de controle; o ficha assume sozinho quando liberar.</div>`}
+    ${wiz}
+    <div class="pad">
+      <div class="stick ${dx || dy ? "moved" : ""}"><i style="transform:translate(${dx * 26}px,${dy * 26}px)"></i></div>
+      <div class="btns" style="grid-template-columns:repeat(${cols},46px)">${btns}</div>
+    </div>
+    <div class="sys"><span class="${a.has("start") ? "on" : ""}">START</span><span class="${a.has("coin") ? "on" : ""}">SELECT</span></div>
+    <div class="actions">
+      <button class="small" onclick="api('remap',{pad:'${p.key}'})">Remapear</button>
+      ${p.kind === "custom" || p.kind === "player" ? `<button class="small" onclick="api('reset',{pad:'${p.key}'})">Voltar ao padrão</button>` : ""}
+      <button class="small" onclick="api('assign',{pad:'${p.key}',slot:null})">Mandar pro banco</button>
+    </div>`;
+}
+
+function renderHero() {
+  const g = S.game;
+  document.documentElement.style.setProperty("--accent", g.accent);
+  // Só redesenha imagem/prateleira quando muda algo: a cada botão apertado chega um estado novo.
+  const key = [g.id, g.running, S.games.map(x => x.installed).join()].join("|");
+  if (key !== heroKey) {
+    heroKey = key;
+    const art = document.getElementById("art");
+    art.style.visibility = g.art ? "" : "hidden";
+    if (g.art) art.src = g.art;
+    document.getElementById("backdrop").style.backgroundImage = g.backdrop ? `url(${g.backdrop})` : "none";
+    document.getElementById("title").textContent = g.title;
+    document.getElementById("meta").innerHTML = [g.emulator, g.year, g.installed ? "" : "não instalado"]
+      .filter(Boolean).map(m => `<span class="pill">${esc(m)}</span>`).join("");
+    document.getElementById("eyebrow").textContent = g.running ? "rodando agora" : "jogo da vez";
+    document.getElementById("shelf").innerHTML = S.games.map(x => `
+      <button class="card ${x.id === g.id ? "sel" : ""}" style="--c:${x.accent}" ${x.installed && !g.running ? "" : "disabled"}
+        title="${x.installed ? (g.running ? "feche o jogo pra trocar" : "") : "não instalado"}" onclick="api('game',{game:'${x.id}'})">
+        <div class="thumb" style="background-image:url(${x.art || ""})"></div>
+        <div class="name">${esc(x.short)}<small>${esc(x.emulator)}</small></div>
+      </button>`).join("");
+  }
+  const play = document.getElementById("play");
+  play.textContent = g.running ? "● RODANDO" : "▶ JOGAR";
+  play.disabled = g.running || !g.installed;
+  document.getElementById("train").style.display = g.training && !g.running ? "" : "none";
+  document.getElementById("stop").style.display = g.running ? "" : "none";
+}
+
+function render() {
+  renderHero();
+  const byKey = Object.fromEntries(S.pads.map(p => [p.key, p]));
+  const focused = document.activeElement && document.activeElement.classList.contains("player") ? document.activeElement : null;
+  [0, 1].forEach(i => {
+    const el = document.getElementById("slot" + i), p = byKey[S.slots[i]];
+    if (focused && el.contains(focused)) return;   // não redesenha enquanto alguém digita o nome
+    el.innerHTML = p ? padPanel(p, i) : side(i) + `<div class="empty"><big>LIVRE</big>pluga um controle ou aperta START</div>`;
+  });
+  const bench = S.pads.filter(p => p.slot === null);
+  document.getElementById("bench").innerHTML = bench.length ? bench.map(p => `
+    <div class="row">
+      <div class="who">${esc(p.player || p.name)}<small>${p.player ? esc(p.name) : ""}</small></div>
+      ${p.wizard ? `<span class="badge default">mapeando: ${esc(p.wizard.label)}</span>` : ""}
+      ${p.grabbed ? "" : `<span class="badge default">segurado por outro programa</span>`}
+      <button class="small" onclick="api('assign',{pad:'${p.key}',slot:0})">→ P1</button>
+      <button class="small" onclick="api('assign',{pad:'${p.key}',slot:1})">→ P2</button>
+    </div>`).join("") : `<div class="log">ninguém esperando</div>`;
+  document.getElementById("log").innerHTML = S.events.map(([t, m]) => `<div><time>${t}</time>${esc(m)}</div>`).join("");
+  document.getElementById("players").innerHTML = S.players.map(o => `<option value="${esc(o)}">`).join("");
+  const g = S.game, n = S.pads.length;
+  document.getElementById("status").innerHTML =
+    `<span class="dot ${g.running ? "on" : ""}"></span>${n} controle${n === 1 ? "" : "s"} · ${g.running ? esc(g.short) + " rodando" : "nenhum jogo aberto"}`;
+  document.getElementById("warn").innerHTML = g.ini_ok ? "" :
+    `<div class="warnbox">A config de controles do ${esc(g.short)} não aponta pro ficha.
+     <button class="small" onclick="api('install')">Consertar</button></div>`;
+}
+
+document.addEventListener("change", e => {
+  if (e.target.classList.contains("player")) api("player", {pad: e.target.dataset.pad, player: e.target.value});
+});
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && e.target.classList.contains("player")) e.target.blur();
+});
+document.addEventListener("click", e => {
+  const r = e.target.closest(".rename");
+  if (!r) return;
+  const n = prompt("Nome desse controle (vazio = nome de fábrica):", r.dataset.name);
+  if (n !== null) api("rename", {pad: r.dataset.pad, alias: n});
+});
+
+const es = new EventSource("/events");
+es.onmessage = e => { S = JSON.parse(e.data); render(); };
+es.onerror = () => {
+  document.getElementById("status").innerHTML = `<span class="dot"></span>ficha desligado — rode <b>ficha</b> pra voltar`;
+};
+</script>
+</body>
+</html>
