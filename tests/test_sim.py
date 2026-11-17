@@ -1,4 +1,5 @@
 """Simula controles com uinput e confere o hub de ponta a ponta (sem tocar no jogo).
+Só Linux, com acesso a /dev/uinput e o ficha FECHADO (ele agarraria os controles do teste).
 
 Usa teclado falso: um teclado virtual de verdade digitaria na janela em foco.
 """
@@ -62,6 +63,9 @@ def press(u, code, hub):
 
 
 def test_all():
+    if not os.access("/dev/uinput", os.W_OK):
+        print("pulado: sem acesso a /dev/uinput (veja docs/setup.md)")
+        return
     import urllib.request
     try:
         urllib.request.urlopen("http://localhost:7373/state", timeout=1)

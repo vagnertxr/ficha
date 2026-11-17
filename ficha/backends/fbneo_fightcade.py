@@ -14,6 +14,7 @@ from .. import i18n
 from ..profiles import KEYMAP
 from . import fightcade
 from .common import kill, pids
+from ..fileio import read_text
 
 NAME = "fbneo-fightcade"
 OUTPUT = "keyboard"
@@ -65,7 +66,7 @@ def _line(full, value):
 def check(game):
     """Inputs que não batem com o teclado virtual (vazio = tudo certo)."""
     try:
-        lines = open(ini_path(game), newline="").read().splitlines()
+        lines = read_text(ini_path(game), newline="").splitlines()
     except OSError:
         return ["(.ini não existe)"]
     seen, bad = set(), []
@@ -96,7 +97,7 @@ def install(game):
         backup = path + ".antes-do-ficha"
         if not os.path.exists(backup):
             shutil.copy2(path, backup)
-        raw = open(path, newline="").read()
+        raw = read_text(path, newline="")
         lines = raw.splitlines()
     else:
         raw, lines = "", MINIMAL_INI.splitlines()
@@ -138,7 +139,7 @@ def ensure_fullscreen():
     Vale também pro Fightcade online (é o .ini geral do emulador)."""
     main = fightcade.where().fbneo_main_ini
     try:
-        text = open(main, newline="").read()   # o .ini é \r\n: preservar
+        text = read_text(main, newline="")   # o .ini é \r\n: preservar
     except OSError:
         return
     new = re.sub(r"^bVidAutoSwitchFull[ \t]+\d+", "bVidAutoSwitchFull 1", text, flags=re.M)

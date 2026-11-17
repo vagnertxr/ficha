@@ -1,0 +1,23 @@
+"UserLocalConfigStore"
+{
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"apps"
+				{
+					"348550"
+					{
+						"LastPlayed"		"1700000000"
+						"Playtime"		"10"
+					}
+				}
+			}
+		}
+	}
+	"SteamController_XBoxSupport"		"1"
+	"SteamController_SwitchSupport"		"1"
+	"SteamController_GenericGamepadSupport"		"1"
+}

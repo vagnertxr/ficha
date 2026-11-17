@@ -1,0 +1,14 @@
+"InstallConfigStore"
+{
+	"Software"
+	{
+		"Valve"
+		{
+			"Steam"
+			{
+				"AutoUpdateWindowEnabled"		"0"
+				"Name \"com aspas\""		"C:\\caminho"
+			}
+		}
+	}
+}

@@ -11,6 +11,7 @@ from . import backends, config, i18n
 from .backends import steam
 from .games import GAMES
 from .i18n import t
+from .fileio import read_bytes
 
 UI = os.path.join(os.path.dirname(__file__), "ui", "index.html")
 ART_RE = re.compile(r"^/art/[a-z0-9_-]+\.jpg$")
@@ -145,12 +146,12 @@ class Panel:
 
             def do_GET(self):
                 if self.path in ("/", "/index.html"):
-                    self._send(200, open(UI, "rb").read(), "text/html; charset=utf-8")
+                    self._send(200, read_bytes(UI), "text/html; charset=utf-8")
                 elif self.path == "/i18n.json":
                     self._send(200, json.dumps({"lang": i18n.lang(), "t": i18n.table()}))
                 elif ART_RE.match(self.path):
                     try:
-                        data = open(os.path.join(config.config_dir(), "art", self.path[5:]), "rb").read()
+                        data = read_bytes(os.path.join(config.config_dir(), "art", self.path[5:]))
                     except OSError:
                         return self._send(404, "{}")
                     self.send_response(200)

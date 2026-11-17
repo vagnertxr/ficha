@@ -24,6 +24,7 @@ import sys
 from .. import config
 from .. import platform as platform_mod
 from .common import kill, pids, spawn, vpad_targets
+from ..fileio import read_text
 
 NAME = "steam"
 OUTPUT = "vpad"
@@ -75,7 +76,7 @@ def check(game):
     if sys.platform == "win32":
         return []
     try:
-        return [] if open(wrapper_path()).read() == wrapper_text() else ["ficha-steam.sh desatualizado"]
+        return [] if read_text(wrapper_path()) == wrapper_text() else ["ficha-steam.sh desatualizado"]
     except OSError:
         return ["ficha-steam.sh não existe"]
 
@@ -122,7 +123,7 @@ def ensure_display(game):
         return
     path = os.path.join(documents_dir(game), spec["file"])
     try:
-        text = open(path, newline="").read()
+        text = read_text(path, newline="")
     except OSError:
         return
     eol = "\r\n" if "\r\n" in text else "\n"
@@ -173,7 +174,7 @@ def client_running():
     for pid in os.listdir("/proc"):
         if pid.isdigit():
             try:
-                if open("/proc/%s/comm" % pid).read().strip() == "steam" and \
+                if read_text("/proc/%s/comm" % pid).strip() == "steam" and \
                         os.path.realpath("/proc/%s/exe" % pid).startswith(os.path.realpath(where().root)):
                     return True
             except OSError:

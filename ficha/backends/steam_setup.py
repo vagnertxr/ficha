@@ -22,6 +22,7 @@ import time
 from .. import config
 from ..i18n import t
 from . import steam, vdf
+from ..fileio import read_text
 
 LAUNCH_OPTIONS = "$HOME/ficha-steam.sh %command%"
 GLOBAL_INPUT_KEYS = ("SteamController_XBoxSupport", "SteamController_PSSupport",
@@ -43,7 +44,7 @@ def plan(game, root, proton=None, global_input=False, platform=sys.platform):
     if not locals_:
         raise FileNotFoundError(t("steam.no_localconfig", root=root))
     lc_path = locals_[0]
-    lc = vdf.loads(open(lc_path, encoding="utf-8").read())
+    lc = vdf.loads(read_text(lc_path))
     store = vdf.path(lc, ["UserLocalConfigStore"], create=True)
     app = vdf.path(store, ["Software", "Valve", "Steam", "apps", appid], create=True)
     want = {"UseSteamControllerConfig": "0"}
@@ -56,7 +57,7 @@ def plan(game, root, proton=None, global_input=False, platform=sys.platform):
             changes.append((lc_path, lc, store, key, "0", vdf.get(store, key)))
     if proton:
         cfg_path = os.path.join(root, "config", "config.vdf")
-        cfg = vdf.loads(open(cfg_path, encoding="utf-8").read())
+        cfg = vdf.loads(read_text(cfg_path))
         mapping = vdf.path(cfg, ["InstallConfigStore", "Software", "Valve", "Steam", "CompatToolMapping", appid],
                            create=True)
         for key, value in (("name", proton), ("config", ""), ("priority", "250")):

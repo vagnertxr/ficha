@@ -6,6 +6,7 @@ import sys
 
 from .. import config
 from .common import spawn
+from ..fileio import read_bytes
 
 APP_ID = "com.fightcade.Fightcade"
 FLATPAK_EMULATOR = "/app/fightcade/Fightcade/emulator"
@@ -27,7 +28,7 @@ def _running_instance():
     env = []
     if pid:
         try:
-            env = [e for e in open("/proc/%s/environ" % pid[0], "rb").read().decode().split("\0") if "=" in e]
+            env = [e for e in read_bytes("/proc/%s/environ" % pid[0]).decode().split("\0") if "=" in e]
         except OSError:
             pass
     return inst, env
