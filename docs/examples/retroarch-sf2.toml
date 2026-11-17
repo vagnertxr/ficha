@@ -1,0 +1,64 @@
+# Exemplo: um jogo qualquer no RetroArch, pelos controles virtuais do ficha.
+# Copie pra ~/.config/ficha/games/ e ajuste o comando.
+# No RetroArch, configure P1 = "ficha P1" e P2 = "ficha P2" uma vez (Settings > Input).
+
+id = "sf2-retroarch"
+title = "Street Fighter II (RetroArch)"
+short = "SF2"
+accent = "#3fa7ff"
+grid = [["lp", "mp", "hp"], ["lk", "mk", "hk"]]
+
+[backend]
+type = "gamepad"
+command = ["retroarch", "-L", "/usr/lib/libretro/fbneo_libretro.so", "~/roms/sf2.zip"]
+process = "retroarch"
+files = ["~/roms/sf2.zip"]
+
+# target = botão do controle virtual (a b x y lb rb lt rt back start)
+[[buttons]]
+id = "lp"
+short = "LP"
+name = { pt = "Soco fraco", en = "Light Punch" }
+target = "x"
+
+[[buttons]]
+id = "mp"
+short = "MP"
+name = { pt = "Soco médio", en = "Medium Punch" }
+target = "y"
+
+[[buttons]]
+id = "hp"
+short = "HP"
+name = { pt = "Soco forte", en = "Heavy Punch" }
+target = "rb"
+
+[[buttons]]
+id = "lk"
+short = "LK"
+name = { pt = "Chute fraco", en = "Light Kick" }
+target = "a"
+
+[[buttons]]
+id = "mk"
+short = "MK"
+name = { pt = "Chute médio", en = "Medium Kick" }
+target = "b"
+
+[[buttons]]
+id = "hk"
+short = "HK"
+name = { pt = "Chute forte", en = "Heavy Kick" }
+target = "rt"
+
+[layout]
+lp = "west"
+mp = "north"
+hp = "r1"
+lk = "south"
+mk = "east"
+hk = "r2"
+
+[system]
+start = "start"
+coin = "back"

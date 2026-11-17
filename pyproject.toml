@@ -1,0 +1,41 @@
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ficha"
+dynamic = ["version"]
+description = "Plug-and-play controllers for local fighting game sessions: fixed P1/P2, per-player layouts, web panel"
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.11"
+authors = [{ name = "vagnertxr" }]
+keywords = ["fighting games", "controllers", "fightcade", "fbneo", "flycast", "evdev", "uinput", "fgc"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: Microsoft :: Windows",
+    "Topic :: Games/Entertainment :: Arcade",
+    "Environment :: Web Environment",
+]
+# Linux: nenhuma dependência (só a stdlib). Windows: extras abaixo.
+dependencies = []
+
+[project.optional-dependencies]
+windows = ["pysdl2", "pysdl2-dll", "vgamepad"]
+
+[project.scripts]
+ficha = "ficha.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/vagnertxr/ficha"
+
+[tool.setuptools.dynamic]
+version = { attr = "ficha.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["ficha*"]
+
+[tool.setuptools.package-data]
+ficha = ["games/*.toml", "locales/*.json", "ui/*.html"]

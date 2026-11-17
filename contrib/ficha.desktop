@@ -1,0 +1,17 @@
+[Desktop Entry]
+Type=Application
+Name=ficha
+GenericName=Controllers for local fighting game sessions
+GenericName[pt_BR]=Controles pra jogatina presencial
+Comment=Plug a controller and play: automatic P1/P2, per-player layouts
+Comment[pt_BR]=Pluga o controle e joga: P1/P2 automático, layout de cada pessoa
+Exec=ficha
+Icon=input-gaming
+Terminal=false
+Categories=Game;
+Actions=play;
+
+[Desktop Action play]
+Name=Open panel and play the last game
+Name[pt_BR]=Abrir o painel e jogar o último jogo
+Exec=ficha jogar

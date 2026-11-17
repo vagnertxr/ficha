@@ -1,0 +1,5 @@
+# ficha: deixa o usuário da sessão local criar dispositivos virtuais (teclado e
+# controles "ficha P1/P2"). Controles físicos já ganham essa permissão do systemd.
+# Instale com:  sudo cp 60-ficha.rules /etc/udev/rules.d/ && sudo udevadm control --reload && sudo udevadm trigger
+# (pacotes como steam-devices já trazem uma regra equivalente)
+KERNEL=="uinput", SUBSYSTEM=="misc", TAG+="uaccess", OPTIONS+="static_node=uinput"

@@ -1,0 +1,51 @@
+# Exemplo: jogo configurável só por teclado. Cada botão diz a tecla de cada lado [P1, P2].
+# Nomes de tecla: KEY_A..KEY_Z, KEY_0..KEY_9, KEY_UP/DOWN/LEFT/RIGHT, KEY_SPACE, KEY_ENTER, KEY_F1..KEY_F10...
+# As teclas vão pra janela em foco; com 'process', o ficha só aperta com o jogo aberto.
+
+id = "meu-jogo"
+title = "Meu Jogo de Luta"
+short = "MJL"
+accent = "#4fd17a"
+grid = [["a", "b", "c"], ["d", "e", "f"]]
+
+[backend]
+type = "keyboard"
+command = ["meu-jogo"]
+process = "meu-jogo"
+directions = [["KEY_W", "KEY_S", "KEY_A", "KEY_D"], ["KEY_UP", "KEY_DOWN", "KEY_LEFT", "KEY_RIGHT"]]
+
+[[buttons]]
+id = "a"
+target = ["KEY_U", "KEY_Z"]
+
+[[buttons]]
+id = "b"
+target = ["KEY_I", "KEY_X"]
+
+[[buttons]]
+id = "c"
+target = ["KEY_O", "KEY_C"]
+
+[[buttons]]
+id = "d"
+target = ["KEY_J", "KEY_V"]
+
+[[buttons]]
+id = "e"
+target = ["KEY_K", "KEY_B"]
+
+[[buttons]]
+id = "f"
+target = ["KEY_L", "KEY_N"]
+
+[layout]
+a = "west"
+b = "north"
+c = "r1"
+d = "south"
+e = "east"
+f = "r2"
+
+[system]
+start = ["KEY_1", "KEY_2"]
+coin = ["KEY_5", "KEY_6"]

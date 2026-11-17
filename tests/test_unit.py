@@ -116,6 +116,15 @@ class TestGames(unittest.TestCase):
             for row in g.grid:
                 self.assertTrue(set(row) <= set(g.button_ids))
 
+    def test_doc_examples_are_valid(self):
+        import glob, tomllib
+        examples = glob.glob(os.path.join(os.path.dirname(__file__), "..", "docs", "examples", "*.toml"))
+        self.assertTrue(examples)
+        for path in examples:
+            with open(path, "rb") as f:
+                g = games.Game(tomllib.load(f), path)
+            backends.get(g.backend_type)
+
     def test_key_after_buttons_is_an_error(self):
         data = {"id": "x", "title": "X", "backend": {"type": "gamepad"},
                 "buttons": [{"id": "a", "target": "a", "grid": [["a"]]}]}
