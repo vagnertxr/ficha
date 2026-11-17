@@ -1,0 +1,74 @@
+# Street Fighter III: 3rd Strike no FBNeo do Fightcade.
+# O FBNeo recebe P1/P2 pelo teclado virtual do ficha: o ficha aponta o .ini do jogo
+# (config/fcadefbneo/games/sfiii3nr1.ini) pras teclas fixas uma vez só, com backup.
+
+id = "sfiii3nr1"
+title = "Street Fighter III: 3rd Strike"
+short = "3rd Strike"
+year = 1999
+accent = "#ff9f1a"
+training = true
+
+[backend]
+type = "fbneo-fightcade"
+rom = "sfiii3nr1"
+files = ["sfiii3nr1.zip", "sfiii3.zip"]   # qualquer um presente = instalado
+
+# target = nome do input no .ini do FBNeo ("P1 Weak Punch" -> "Weak Punch")
+[[buttons]]
+id = "lp"
+short = "LP"
+name = { pt = "Soco fraco", en = "Light Punch" }
+target = "Weak Punch"
+
+[[buttons]]
+id = "mp"
+short = "MP"
+name = { pt = "Soco médio", en = "Medium Punch" }
+target = "Medium Punch"
+
+[[buttons]]
+id = "hp"
+short = "HP"
+name = { pt = "Soco forte", en = "Heavy Punch" }
+target = "Strong Punch"
+
+[[buttons]]
+id = "lk"
+short = "LK"
+name = { pt = "Chute fraco", en = "Light Kick" }
+target = "Weak Kick"
+
+[[buttons]]
+id = "mk"
+short = "MK"
+name = { pt = "Chute médio", en = "Medium Kick" }
+target = "Medium Kick"
+
+[[buttons]]
+id = "hk"
+short = "HK"
+name = { pt = "Chute forte", en = "Heavy Kick" }
+target = "Strong Kick"
+
+# Como aparece no painel: fileira de cima, fileira de baixo (gabinete de 6 botões)
+grid = [["lp", "mp", "hp"], ["lk", "mk", "hk"]]
+
+# Layout padrão por posição física (soco em cima, chute embaixo)
+[layout]
+lp = "west"
+mp = "north"
+hp = "r1"
+lk = "south"
+mk = "east"
+hk = "r2"
+3p = "l1"
+3k = "l2"
+
+[macros.3p]
+name = { pt = "3 socos", en = "3 punches" }
+buttons = ["lp", "mp", "hp"]
+
+[macros.3k]
+name = { pt = "3 chutes", en = "3 kicks" }
+buttons = ["lk", "mk", "hk"]

@@ -1,0 +1,92 @@
+# Guilty Gear XX Accent Core Plus R (Steam, app 348550).
+# Sai pelos dois controles virtuais do ficha. Pra funcionar, rode uma vez
+#   ficha steam configurar ggxxacpr
+# (desliga o Steam Input no jogo e põe a opção de inicialização do ficha).
+#
+# Os alvos abaixo assumem, dentro do jogo, Help & Options > Controller Settings
+# em MODE = CONTROLLER nos dois lados (o padrão):
+#   Punch=X  Kick=A  Slash=Y  H-Slash=B  Dust=RB  Respect=RT  Reset=BACK
+# Se mudar lá, mude aqui (ou no seu <config>/games/ggxxacpr.toml).
+#
+# Linux: em out/2026 o GG travava (janela preta) com o Proton Experimental;
+# com o Proton 9 funciona (ficha steam configurar ggxxacpr --proton proton_9).
+
+id = "ggxxacpr"
+title = "Guilty Gear XX Accent Core Plus R"
+short = "GG +R"
+year = 2012
+accent = "#ff3d4a"
+optional = ["respect"]
+
+[backend]
+type = "steam"
+appid = 348550
+process = "GGXXACPR_Win.exe"
+files = ["Guilty Gear XX Accent Core Plus R/GGXXACPR_Win.exe"]
+
+# Tela cheia: o ficha ajusta o DisplaySetting.cfg do jogo antes de abrir.
+[backend.display]
+file = "ARC SYSTEM WORKS/GGXXAC/Config/DisplaySetting.cfg"   # relativo a Documentos
+values = { ":FullScreen" = "1", ":FullscreenResolutionWidth" = "1920", ":FullscreenResolutionHeight" = "1080" }
+
+[[buttons]]
+id = "p"
+short = "P"
+name = { pt = "Soco (Punch)", en = "Punch" }
+target = "x"
+
+[[buttons]]
+id = "s"
+short = "S"
+name = "Slash"
+target = "y"
+
+[[buttons]]
+id = "hs"
+short = "HS"
+name = "Heavy Slash"
+target = "b"
+
+[[buttons]]
+id = "k"
+short = "K"
+name = { pt = "Chute (Kick)", en = "Kick" }
+target = "a"
+
+[[buttons]]
+id = "d"
+short = "D"
+name = "Dust"
+target = "rb"
+
+[[buttons]]
+id = "respect"
+short = "R"
+name = { pt = "Respect (provocação)", en = "Respect (taunt)" }
+target = "rt"
+
+# Gabinete: P S HS em cima, K D embaixo
+grid = [["p", "s", "hs"], ["k", "d", "respect"]]
+
+[layout]
+p = "west"
+s = "north"
+hs = "r1"
+k = "south"
+d = "east"
+respect = "l1"
+rc = "r2"
+fd = "l2"
+
+[macros.rc]
+name = "Roman Cancel"
+buttons = ["p", "k", "s"]
+
+[macros.fd]
+name = "Faultless Defense"
+buttons = ["p", "k"]
+
+# START = START; SELECT do controle = BACK (Reset no modo treino)
+[system]
+start = "start"
+coin = "back"

@@ -21,3 +21,11 @@ def current():
         from .windows import WindowsPlatform
         return WindowsPlatform()
     raise RuntimeError("plataforma sem suporte: %s" % sys.platform)
+
+
+def vpad_id():
+    """(vendor, product) dos controles virtuais do ficha nesta plataforma."""
+    if sys.platform == "win32":
+        return (0x045E, 0x028E)   # o ViGEm cria controles Xbox 360
+    from .linux import VPAD_ID
+    return VPAD_ID

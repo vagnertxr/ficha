@@ -1,0 +1,63 @@
+# Marvel vs. Capcom 2, versão Dreamcast, no Flycast do Fightcade.
+# O Flycast recebe P1/P2 pelos dois controles virtuais do ficha; o ficha esconde
+# do Flycast todos os outros controles (filtro do SDL) e fixa as portas na linha de comando.
+# Funciona com a imagem de Dreamcast (.cdi/.chd); a versão Naomi (mvsc2.zip) teria outro mapeamento.
+
+id = "mvc2"
+title = "Marvel vs. Capcom 2"
+short = "MvC2"
+year = 2000
+accent = "#a274ff"
+
+[backend]
+type = "flycast-fightcade"
+files = ["Marvel vs. Capcom 2.cdi", "Marvel vs. Capcom 2 (USA).chd"]
+
+# target = botão do controle virtual (Xbox). O Flycast traduz X->X, Y->Y,
+# A->A, B->B, LT->L, RT->R do Dreamcast; o MvC2 usa X=LP Y=HP A=LK B=HK L/R=parceiros.
+[[buttons]]
+id = "lp"
+short = "LP"
+name = { pt = "Soco fraco", en = "Light Punch" }
+target = "x"
+
+[[buttons]]
+id = "hp"
+short = "HP"
+name = { pt = "Soco forte", en = "Heavy Punch" }
+target = "y"
+
+[[buttons]]
+id = "a1"
+short = "A1"
+name = { pt = "Parceiro A", en = "Assist 1" }
+target = "lt"
+
+[[buttons]]
+id = "lk"
+short = "LK"
+name = { pt = "Chute fraco", en = "Light Kick" }
+target = "a"
+
+[[buttons]]
+id = "hk"
+short = "HK"
+name = { pt = "Chute forte", en = "Heavy Kick" }
+target = "b"
+
+[[buttons]]
+id = "a2"
+short = "A2"
+name = { pt = "Parceiro B", en = "Assist 2" }
+target = "rt"
+
+# Gabinete: LP HP A1 em cima, LK HK A2 embaixo
+grid = [["lp", "hp", "a1"], ["lk", "hk", "a2"]]
+
+[layout]
+lp = "west"
+hp = "north"
+a1 = "r1"
+lk = "south"
+hk = "east"
+a2 = "r2"

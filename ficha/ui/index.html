@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" id="html">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -58,6 +58,14 @@ button.danger { color: #ff8f84; }
   transition: transform .15s, border-color .15s; position: relative; }
 .card:hover:not(:disabled) { transform: translateY(-2px); }
 .card .thumb { aspect-ratio: 16 / 9; background: #000 center / cover; }
+/* Pôster gerado quando o jogo não tem arte: cor do jogo + título */
+.poster { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding: 8%;
+  background: radial-gradient(120% 90% at 85% 10%, color-mix(in srgb, var(--c) 75%, #fff) 0%, var(--c) 35%, #120d16 100%); position: relative; overflow: hidden; }
+.poster::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(115deg, rgba(255,255,255,.06) 0 2px, transparent 2px 18px); }
+.poster b { position: relative; font-size: clamp(22px, 7vw, 64px); font-weight: 900; font-style: italic; letter-spacing: -.04em; line-height: .9; color: #fff;
+  text-shadow: 0 4px 30px rgba(0,0,0,.45); }
+.poster small { position: relative; margin-top: 8px; color: rgba(255,255,255,.8); font-weight: 700; letter-spacing: .04em; }
+.card .poster { padding: 10px; } .card .poster b { font-size: 22px; } .card .poster small { display: none; }
 .card .name { padding: 8px 10px 10px; font-weight: 800; font-size: 14px; }
 .card .name small { display: block; color: var(--muted); font-weight: 600; font-size: 12px; }
 .card.sel { border-color: var(--c); box-shadow: 0 0 0 1px var(--c), 0 8px 24px -10px var(--c); opacity: 1; }
@@ -144,18 +152,18 @@ kbd { font: 800 11px var(--display); background: #2a2c37; padding: 2px 7px; bord
   <div class="wrap">
     <div class="top">
       <div class="logo"><span class="coin">¢</span>ficha</div>
-      <span class="pill" id="status"><span class="dot"></span>conectando…</span>
+      <span class="pill" id="status"><span class="dot"></span>…</span>
     </div>
     <div class="stage">
-      <div class="art"><img id="art" alt=""><div class="scan"></div></div>
+      <div class="art" id="artbox"></div>
       <div>
-        <div class="eyebrow" id="eyebrow">jogo da vez</div>
+        <div class="eyebrow" id="eyebrow"></div>
         <div class="title" id="title"></div>
         <div class="meta" id="meta"></div>
         <div class="cta">
-          <button class="play" id="play" onclick="api('launch',{mode:'play'})">▶ JOGAR</button>
-          <button class="ghost" id="train" onclick="api('launch',{mode:'training'})">Treino</button>
-          <button class="ghost danger" id="stop" onclick="api('stop')">Fechar jogo</button>
+          <button class="play" id="play" onclick="api('launch',{mode:'play'})"></button>
+          <button class="ghost" id="train" onclick="api('launch',{mode:'training'})" data-t="ui.training"></button>
+          <button class="ghost danger" id="stop" onclick="api('stop')" data-t="ui.close_game"></button>
         </div>
       </div>
     </div>
@@ -166,36 +174,47 @@ kbd { font: 800 11px var(--display); background: #2a2c37; padding: 2px 7px; bord
   <div id="warn"></div>
   <div class="arena">
     <section class="slot p1" id="slot0"></section>
-    <div class="vs"><b>VS</b><button class="small" onclick="api('swap')" title="Trocar P1 e P2">⇄ trocar</button></div>
+    <div class="vs"><b>VS</b><button class="small" onclick="api('swap')" data-t="ui.swap"></button></div>
     <section class="slot p2" id="slot1"></section>
   </div>
   <div class="cols">
-    <div><h2>Banco</h2><div class="bench" id="bench"></div></div>
-    <div><h2>Acontecendo</h2><div class="log" id="log"></div></div>
+    <div><h2 data-t="ui.bench"></h2><div class="bench" id="bench"></div></div>
+    <div><h2 data-t="ui.happening"></h2><div class="log" id="log"></div></div>
   </div>
-  <h2>No controle</h2>
+  <h2 data-t="ui.on_controller"></h2>
   <div class="help">
-    <span><kbd>START</kbd> entra num lado livre</span>
-    <span><kbd>START</kbd>+<kbd>SELECT</kbd> rapidinho: troca de lado</span>
-    <span>segura <kbd>START</kbd>+<kbd>SELECT</kbd> 2s: remapeia</span>
+    <span data-t="ui.help_start"></span>
+    <span data-t="ui.help_swap"></span>
+    <span data-t="ui.help_remap"></span>
   </div>
   <div class="foot">
-    <span>ficha · pluga e joga</span>
-    <button class="small danger" onclick="if(confirm('Desligar o ficha? Os controles param de funcionar no jogo.')) api('quit')">Desligar ficha</button>
+    <span>ficha · <span data-t="ui.tagline"></span> · <a href="#" id="langswitch" style="color:inherit"></a></span>
+    <button class="small danger" onclick="if(confirm(T('ui.quit_confirm'))) api('quit')" data-t="ui.quit"></button>
   </div>
 </main>
 <datalist id="players"></datalist>
 <script>
-const KIND = {player: ["custom", p => "layout de " + p.player], custom: ["custom", () => "layout do controle"],
-              default: ["default", () => "layout padrão"]};
-let S = null, heroKey = "";
+let S = null, heroKey = "", L = {t: {}, lang: "pt"};
 const PENCIL = `<svg width="12" height="12" viewBox="0 0 16 16" aria-hidden="true" style="vertical-align:-1px"><path fill="currentColor" d="M11.7 1.3a1 1 0 0 1 1.4 0l1.6 1.6a1 1 0 0 1 0 1.4l-8.9 8.9-3.6 1 1-3.6z"/></svg>`;
+const KBD = s => s.replace(/\b(START|SELECT)\b/g, "<kbd>$1</kbd>");
 
+function T(key, args = {}) {
+  let s = L.t[key] || key;
+  for (const [k, v] of Object.entries(args)) s = s.split("{" + k + "}").join(v);
+  return s;
+}
 async function api(name, body = {}) {
   await fetch("/api/" + name, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)});
 }
 function esc(s) { return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c])); }
-function side(i) { return `<div class="tag">P${i + 1} <small>${i ? "LADO DIREITO" : "LADO ESQUERDO"}</small></div>`; }
+function side(i) { return `<div class="tag">P${i + 1} <small>${T(i ? "ui.right_side" : "ui.left_side")}</small></div>`; }
+function poster(g, cls = "") { return `<div class="poster ${cls}" style="--c:${g.accent}"><b>${esc(g.short)}</b><small>${esc(g.title)}</small></div>`; }
+function kindLabel(p) {
+  if (p.kind === "player") return ["custom", T("ui.layout_player", {player: p.player})];
+  if (p.kind === "custom") return ["custom", T("ui.layout_controller")];
+  if (p.kind === "default") return ["default", T("ui.layout_default")];
+  return ["", T("ui.no_mapping")];
+}
 
 function padPanel(p, slot) {
   const a = new Set(p.actions), w = p.wizard, g = S.game;
@@ -209,20 +228,20 @@ function padPanel(p, slot) {
     return `<div class="${c}">${short[k]}</div>`;
   }).join("")).join("");
   const cols = Math.max(...g.grid.map(r => r.length));
-  const kind = KIND[p.kind] ? [KIND[p.kind][0], KIND[p.kind][1](p)] : ["", "sem mapa"];
+  const kind = kindLabel(p);
   const wiz = w ? `<div class="wizard">
-      <div class="hint">mapeando pro ${esc(g.short)} — passo ${w.idx + 1} de ${w.total}</div>
+      <div class="hint">${T("ui.wiz_step", {game: esc(g.short), n: w.idx + 1, total: w.total})}</div>
       <div class="bar"><i style="width:${100 * w.idx / w.total}%"></i></div>
-      <div class="ask">Aperte ${esc(w.label)}</div>
-      <div class="msg">${esc(w.message || (w.skippable ? "ou START de novo pra pular" : ""))}</div>
-      <button class="small" onclick="api('cancel',{pad:'${p.key}'})">cancelar</button>
+      <div class="ask">${T("ui.wiz_press", {button: esc(w.label)})}</div>
+      <div class="msg">${esc(w.message || (w.skippable ? T("ui.wiz_skip") : ""))}</div>
+      <button class="small" onclick="api('cancel',{pad:'${p.key}'})">${T("ui.cancel")}</button>
     </div>` : "";
   return side(slot) + `
-    <input class="player" data-pad="${p.key}" list="players" placeholder="quem joga?" value="${esc(p.player)}">
-    <div class="model"><span class="rename" data-pad="${p.key}" data-name="${esc(p.name)}" title="${esc(p.model)} — clique pra renomear">${esc(p.name)} ${PENCIL}</span>
+    <input class="player" data-pad="${p.key}" list="players" placeholder="${T("ui.who_plays")}" value="${esc(p.player)}">
+    <div class="model"><span class="rename" data-pad="${p.key}" data-name="${esc(p.name)}" title="${esc(p.model)} — ${T("ui.click_rename")}">${esc(p.name)} ${PENCIL}</span>
       <span class="badge ${kind[0]}">${esc(kind[1])}</span>
-      ${p.unique ? "" : `<span class="badge" title="Esse modelo não tem número de série: todos iguais compartilham o perfil">por modelo</span>`}</div>
-    ${p.grabbed ? "" : `<div class="warnbox" style="margin:0">Outro programa está segurando esse controle (geralmente a Steam, pelo Steam Input): os botões não chegam no ficha. Feche a Steam ou desligue o Steam Input pra esse tipo de controle; o ficha assume sozinho quando liberar.</div>`}
+      ${p.unique ? "" : `<span class="badge" title="${T("ui.by_model_tip")}">${T("ui.by_model")}</span>`}</div>
+    ${p.grabbed ? "" : `<div class="warnbox" style="margin:0">${T("ui.held_warning")}</div>`}
     ${wiz}
     <div class="pad">
       <div class="stick ${dx || dy ? "moved" : ""}"><i style="transform:translate(${dx * 26}px,${dy * 26}px)"></i></div>
@@ -230,36 +249,35 @@ function padPanel(p, slot) {
     </div>
     <div class="sys"><span class="${a.has("start") ? "on" : ""}">START</span><span class="${a.has("coin") ? "on" : ""}">SELECT</span></div>
     <div class="actions">
-      <button class="small" onclick="api('remap',{pad:'${p.key}'})">Remapear</button>
-      ${p.kind === "custom" || p.kind === "player" ? `<button class="small" onclick="api('reset',{pad:'${p.key}'})">Voltar ao padrão</button>` : ""}
-      <button class="small" onclick="api('assign',{pad:'${p.key}',slot:null})">Mandar pro banco</button>
+      <button class="small" onclick="api('remap',{pad:'${p.key}'})">${T("ui.remap")}</button>
+      ${p.kind === "custom" || p.kind === "player" ? `<button class="small" onclick="api('reset',{pad:'${p.key}'})">${T("ui.reset")}</button>` : ""}
+      <button class="small" onclick="api('assign',{pad:'${p.key}',slot:null})">${T("ui.to_bench")}</button>
     </div>`;
 }
 
 function renderHero() {
   const g = S.game;
   document.documentElement.style.setProperty("--accent", g.accent);
-  // Só redesenha imagem/prateleira quando muda algo: a cada botão apertado chega um estado novo.
-  const key = [g.id, g.running, S.games.map(x => x.installed).join()].join("|");
+  // Só redesenha arte/prateleira quando muda algo: a cada botão apertado chega um estado novo.
+  const key = [g.id, g.running, L.lang, S.games.map(x => x.installed).join()].join("|");
   if (key !== heroKey) {
     heroKey = key;
-    const art = document.getElementById("art");
-    art.style.visibility = g.art ? "" : "hidden";
-    if (g.art) art.src = g.art;
+    document.getElementById("artbox").innerHTML = g.art ? `<img src="${g.art}" alt=""><div class="scan"></div>` : poster(g);
     document.getElementById("backdrop").style.backgroundImage = g.backdrop ? `url(${g.backdrop})` : "none";
+    document.getElementById("backdrop").style.backgroundColor = g.backdrop ? "" : g.accent;
     document.getElementById("title").textContent = g.title;
-    document.getElementById("meta").innerHTML = [g.emulator, g.year, g.installed ? "" : "não instalado"]
+    document.getElementById("meta").innerHTML = [g.emulator, g.year, g.installed ? "" : T("ui.not_installed")]
       .filter(Boolean).map(m => `<span class="pill">${esc(m)}</span>`).join("");
-    document.getElementById("eyebrow").textContent = g.running ? "rodando agora" : "jogo da vez";
+    document.getElementById("eyebrow").textContent = T(g.running ? "ui.running_now" : "ui.current_game");
     document.getElementById("shelf").innerHTML = S.games.map(x => `
       <button class="card ${x.id === g.id ? "sel" : ""}" style="--c:${x.accent}" ${x.installed && !g.running ? "" : "disabled"}
-        title="${x.installed ? (g.running ? "feche o jogo pra trocar" : "") : "não instalado"}" onclick="api('game',{game:'${x.id}'})">
-        <div class="thumb" style="background-image:url(${x.art || ""})"></div>
+        title="${x.installed ? (g.running ? T("ui.close_to_switch") : "") : T("ui.not_installed")}" onclick="api('game',{game:'${x.id}'})">
+        <div class="thumb" ${x.art ? `style="background-image:url(${x.art})"` : ""}>${x.art ? "" : poster(x)}</div>
         <div class="name">${esc(x.short)}<small>${esc(x.emulator)}</small></div>
       </button>`).join("");
   }
   const play = document.getElementById("play");
-  play.textContent = g.running ? "● RODANDO" : "▶ JOGAR";
+  play.textContent = T(g.running ? "ui.running" : "ui.play");
   play.disabled = g.running || !g.installed;
   document.getElementById("train").style.display = g.training && !g.running ? "" : "none";
   document.getElementById("stop").style.display = g.running ? "" : "none";
@@ -272,25 +290,32 @@ function render() {
   [0, 1].forEach(i => {
     const el = document.getElementById("slot" + i), p = byKey[S.slots[i]];
     if (focused && el.contains(focused)) return;   // não redesenha enquanto alguém digita o nome
-    el.innerHTML = p ? padPanel(p, i) : side(i) + `<div class="empty"><big>LIVRE</big>pluga um controle ou aperta START</div>`;
+    el.innerHTML = p ? padPanel(p, i) : side(i) + `<div class="empty"><big>${T("ui.free")}</big>${T("ui.free_hint")}</div>`;
   });
   const bench = S.pads.filter(p => p.slot === null);
   document.getElementById("bench").innerHTML = bench.length ? bench.map(p => `
     <div class="row">
       <div class="who">${esc(p.player || p.name)}<small>${p.player ? esc(p.name) : ""}</small></div>
-      ${p.wizard ? `<span class="badge default">mapeando: ${esc(p.wizard.label)}</span>` : ""}
-      ${p.grabbed ? "" : `<span class="badge default">segurado por outro programa</span>`}
+      ${p.wizard ? `<span class="badge default">${T("ui.mapping_badge", {button: esc(p.wizard.label)})}</span>` : ""}
+      ${p.grabbed ? "" : `<span class="badge default">${T("ui.held_badge")}</span>`}
       <button class="small" onclick="api('assign',{pad:'${p.key}',slot:0})">→ P1</button>
       <button class="small" onclick="api('assign',{pad:'${p.key}',slot:1})">→ P2</button>
-    </div>`).join("") : `<div class="log">ninguém esperando</div>`;
+    </div>`).join("") : `<div class="log">${T("ui.nobody_waiting")}</div>`;
   document.getElementById("log").innerHTML = S.events.map(([t, m]) => `<div><time>${t}</time>${esc(m)}</div>`).join("");
   document.getElementById("players").innerHTML = S.players.map(o => `<option value="${esc(o)}">`).join("");
   const g = S.game, n = S.pads.length;
-  document.getElementById("status").innerHTML =
-    `<span class="dot ${g.running ? "on" : ""}"></span>${n} controle${n === 1 ? "" : "s"} · ${g.running ? esc(g.short) + " rodando" : "nenhum jogo aberto"}`;
+  document.getElementById("status").innerHTML = `<span class="dot ${g.running ? "on" : ""}"></span>` +
+    T(n === 1 ? "ui.status_one" : "ui.status_many", {n}) + " · " +
+    (g.running ? T("ui.status_running", {game: esc(g.short)}) : T("ui.status_idle"));
   document.getElementById("warn").innerHTML = g.ini_ok ? "" :
-    `<div class="warnbox">A config de controles do ${esc(g.short)} não aponta pro ficha.
-     <button class="small" onclick="api('install')">Consertar</button></div>`;
+    `<div class="warnbox">${T("ui.config_warning", {game: esc(g.short)})}
+     <button class="small" onclick="api('install')">${T("ui.fix")}</button></div>`;
+}
+
+function applyStatic() {
+  document.getElementById("html").lang = L.lang === "pt" ? "pt-BR" : "en";
+  document.querySelectorAll("[data-t]").forEach(el => { el.innerHTML = KBD(esc(T(el.dataset.t))); });
+  document.getElementById("langswitch").textContent = L.lang === "pt" ? "English" : "Português";
 }
 
 document.addEventListener("change", e => {
@@ -299,18 +324,31 @@ document.addEventListener("change", e => {
 document.addEventListener("keydown", e => {
   if (e.key === "Enter" && e.target.classList.contains("player")) e.target.blur();
 });
-document.addEventListener("click", e => {
+document.addEventListener("click", async e => {
+  if (e.target.id === "langswitch") {
+    e.preventDefault();
+    await api("lang", {lang: L.lang === "pt" ? "en" : "pt"});
+    return load();
+  }
   const r = e.target.closest(".rename");
   if (!r) return;
-  const n = prompt("Nome desse controle (vazio = nome de fábrica):", r.dataset.name);
+  const n = prompt(T("ui.rename_prompt"), r.dataset.name);
   if (n !== null) api("rename", {pad: r.dataset.pad, alias: n});
 });
 
-const es = new EventSource("/events");
-es.onmessage = e => { S = JSON.parse(e.data); render(); };
-es.onerror = () => {
-  document.getElementById("status").innerHTML = `<span class="dot"></span>ficha desligado — rode <b>ficha</b> pra voltar`;
-};
+async function load() {
+  L = await (await fetch("/i18n.json")).json();
+  heroKey = "";
+  applyStatic();
+  if (S) render();
+}
+load().then(() => {
+  const es = new EventSource("/events");
+  es.onmessage = e => { S = JSON.parse(e.data); render(); };
+  es.onerror = () => {
+    document.getElementById("status").innerHTML = `<span class="dot"></span>${T("ui.disconnected")}`;
+  };
+});
 </script>
 </body>
 </html>

@@ -7,17 +7,17 @@ import threading
 import time
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
-from . import fbneo, flycast, steam
+from . import backends, config, i18n
+from .backends import steam
+from .games import GAMES
+from .i18n import t
 
-EMULATORS = {"fbneo": fbneo, "flycast": flycast, "steam": steam}
+UI = os.path.join(os.path.dirname(__file__), "ui", "index.html")
+ART_RE = re.compile(r"^/art/[a-z0-9_-]+\.jpg$")
 
 
 def any_running():
-    return any(m.is_running() for m in EMULATORS.values())
-
-UI = os.path.join(os.path.dirname(__file__), "ui.html")
-ART_DIR = os.path.join(os.path.dirname(__file__), "art")
-ART_RE = re.compile(r"^/art/[a-z0-9-]+\.jpg$")
+    return backends.any_running(GAMES.values())
 
 
 class Panel:
@@ -28,14 +28,14 @@ class Panel:
 
     @property
     def game(self):
-        return self.hub.game.id
+        return self.hub.game
 
     @property
     def emu(self):
-        return EMULATORS[self.hub.game.emulator]
+        return backends.get(self.hub.game.backend_type)
 
     def _refresh_game(self):
-        self.game_state = {"running": self.emu.is_running(), "ini_ok": not self.emu.check_ini(self.game)}
+        self.game_state = {"running": self.emu.is_running(self.game), "ini_ok": not self.emu.check(self.game)}
         self.hub.set_output(self.game_state["running"])
 
     def watch_game(self):
@@ -45,8 +45,8 @@ class Panel:
             # O FBNeo regrava o .ini ao fechar: se ele foi aberto com a config
             # antiga (antes do ficha subir), desfaz a nossa. Conserta assim que fecha.
             if not self.game_state["running"] and not self.game_state["ini_ok"]:
-                self.emu.install_ini(self.game)
-                self.hub.log("Config do jogo reapontada pro ficha")
+                self.emu.install(self.game)
+                self.hub.log(t("log.config_reapplied"))
                 self._refresh_game()
             self._free_from_steam()
             if self.game_state != before:
@@ -54,9 +54,11 @@ class Panel:
             time.sleep(1)
 
     def _free_from_steam(self):
-        """A Steam (Steam Input) agarra controles genéricos, como a Brook, e aí os
-        botões não chegam no ficha. Sem jogo da Steam aberto, fecha a Steam; o hub
-        tenta agarrar de novo a cada scan. Autorizado pelo Vagner."""
+        """A Steam (Steam Input) pode agarrar controles, e aí os botões não chegam
+        no ficha. Com `fechar_steam = true` na config e nenhum jogo da Steam
+        aberto, fecha a Steam; o hub tenta agarrar de novo a cada scan."""
+        if not config.CONFIG.get("fechar_steam"):
+            return
         held = [p for p in list(self.hub.pads.values()) if not p.dev.grabbed]
         if not held or steam.is_running() or not steam.client_running():
             return
@@ -64,7 +66,7 @@ class Panel:
             return
         self._steam_closed_at = time.monotonic()
         steam.shutdown_client()
-        self.hub.log("Fechei a Steam: ela estava segurando %s" % ", ".join(self.hub.label(p) for p in held))
+        self.hub.log(t("log.closed_steam", pads=", ".join(self.hub.label(p) for p in held)))
 
     def state(self):
         s = self.hub.snapshot()
@@ -80,7 +82,7 @@ class Panel:
             hub.set_player(pad, str(body.get("player", "")))
         elif name == "game":
             if any_running():
-                hub.log("Fecha o jogo antes de trocar")
+                hub.log(t("log.close_game_first"))
             else:
                 hub.set_game(body.get("game"))
         elif name == "rename" and pad:
@@ -95,25 +97,30 @@ class Panel:
             slot = body.get("slot")
             hub.assign(pad, slot if slot in (0, 1) else None)
         elif name == "launch" and any_running():
-            hub.log("O jogo já está aberto")
+            hub.log(t("log.already_open"))
         elif name == "launch":
-            mode = "training" if body.get("mode") == "training" else "play"
-            if not hub.game.training:
-                mode = "play"
-            if self.emu.check_ini(self.game):
-                self.emu.install_ini(self.game)
-            self.emu.launch(self.game, mode)
-            hub.log("Abrindo %s (%s)…" % (hub.game.short, "treino" if mode == "training" else "offline"))
+            mode = "training" if body.get("mode") == "training" and hub.game.training else "play"
+            if self.emu.check(self.game):
+                self.emu.install(self.game)
+            if self.emu.launch(self.game, mode) is None and not self.emu.is_running(self.game):
+                hub.log(t("log.cannot_launch", game=hub.game.short))
+            else:
+                hub.log(t("log.opening_training" if mode == "training" else "log.opening", game=hub.game.short))
         elif name == "stop":
-            for m in EMULATORS.values():
-                m.stop()
-            hub.log("Fechando o jogo")
+            for g in GAMES.values():
+                backends.get(g.backend_type).stop(g)
+            hub.log(t("log.closing_game"))
+        elif name == "lang" and body.get("lang") in i18n.LANGS:
+            i18n.set_lang(body["lang"])
+            hub.store.data["idioma"] = body["lang"]
+            hub.store.save()
+            hub.log(t("log.lang"))
         elif name == "quit":
-            hub.log("Desligando o ficha")
+            hub.log(t("log.quitting"))
             hub.running = False
         elif name == "install":
-            self.emu.install_ini(self.game)
-            hub.log("Config do %s apontada pro ficha" % self.game)
+            self.emu.install(self.game)
+            hub.log(t("log.config_applied", game=self.game.short))
         else:
             return False
         self._refresh_game()
@@ -139,9 +146,11 @@ class Panel:
             def do_GET(self):
                 if self.path in ("/", "/index.html"):
                     self._send(200, open(UI, "rb").read(), "text/html; charset=utf-8")
+                elif self.path == "/i18n.json":
+                    self._send(200, json.dumps({"lang": i18n.lang(), "t": i18n.table()}))
                 elif ART_RE.match(self.path):
                     try:
-                        data = open(os.path.join(ART_DIR, self.path[5:]), "rb").read()
+                        data = open(os.path.join(config.config_dir(), "art", self.path[5:]), "rb").read()
                     except OSError:
                         return self._send(404, "{}")
                     self.send_response(200)

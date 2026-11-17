@@ -11,9 +11,11 @@ import errno
 import threading
 import time
 
+from . import backends
 from . import codes as ev
 from . import platform as platform_mod
-from .games import DEFAULT_GAME, GAMES, VPAD_OUT
+from .games import DEFAULT_GAME, GAMES
+from .i18n import t
 from .profiles import (ALL_KEYS, DEFAULT_DIRECTIONS, DIRECTION_SOURCES, KEYMAP, ProfileStore,
                        device_identity, layout_to_mapping, mapping_to_layout, model_key, positions)
 
@@ -132,10 +134,10 @@ class Wizard:
         step = self.step
         if (step in SKIPPABLE or step in self.game.optional) and src == self.captured.get("start"):
             self.captured[step] = None
-            self.message = "%s pulado" % self.game.label(step)
+            self.message = t("wiz.skipped", button=self.game.label(step))
         elif src in self.captured.values():
-            self.message = "Esse botão já é %s" % self.game.label(
-                [a for a, s in self.captured.items() if s == src][0])
+            self.message = t("wiz.already", button=self.game.label(
+                [a for a, s in self.captured.items() if s == src][0]))
             return False
         else:
             self.captured[step] = src
@@ -163,7 +165,7 @@ class Hub:
         self.version = 0
         self.events = collections.deque(maxlen=25)
         self.game = GAMES.get(self.store.data.get("ultimo_jogo")) or GAMES[DEFAULT_GAME]
-        self.kb = self.plat.make_keyboard(ALL_KEYS) if keyboard else None
+        self.kb = self.plat.make_keyboard(sorted(set(ALL_KEYS) | set(ev.KEYS.values()))) if keyboard else None
         self.vpads = self.plat.make_vpads() if keyboard else [None, None]
         self.running = False
         self._last_scan = 0
@@ -190,7 +192,7 @@ class Hub:
             pad.alias = " ".join(alias.split())[:40]
             self.store.controller(pad.pid)["apelido"] = pad.alias
             self.store.save()
-            self.log("%s agora se chama %s" % (pad.dev.name, pad.name))
+            self.log(t("log.renamed", model=pad.dev.name, name=pad.name))
 
     def scan(self):
         for dev in self.plat.discover(set(self.pads)):
@@ -202,7 +204,7 @@ class Hub:
                 pad.dev.grab()
                 if pad.dev.grabbed:
                     pad.keys, pad.abs = pad.dev.pressed_keys(), pad.dev.current_abs()
-                    self.log("%s liberado: agora o ficha lê esse controle" % self.label(pad))
+                    self.log(t("log.freed", pad=self.label(pad)))
 
     def add_pad(self, dev):
         dev.grab()
@@ -219,12 +221,12 @@ class Hub:
         who = self.label(pad)
         free = self.free_slot()
         if not dev.grabbed:
-            self.log("%s: outro programa (a Steam?) está segurando esse controle" % who)
+            self.log(t("log.held", pad=who))
         if free is not None:
             self.assign(pad, free, quiet=True)
-            self.log("%s conectou → P%d" % (who, free + 1))
+            self.log(t("log.connected", pad=who, slot=free + 1))
         else:
-            self.log("%s conectou (no banco: aperte START quando liberar)" % who)
+            self.log(t("log.connected_bench", pad=who))
         if pad.mapping is None:
             self.start_wizard(pad)
         return pad
@@ -235,7 +237,7 @@ class Hub:
             self.slots[pad.slot] = None
         pad.dev.close()
         del self.pads[pad.key]
-        self.log("%s desconectou" % self.label(pad))
+        self.log(t("log.disconnected", pad=self.label(pad)))
 
     def free_slot(self):
         for i, s in enumerate(self.slots):
@@ -278,18 +280,7 @@ class Hub:
         self._emit(slot, set())
 
     def _targets(self, slot, acts):
-        game = self.game
-        if game.emulator in ("flycast", "steam"):
-            out = set()
-            for a in acts:
-                if a in ("up", "down", "left", "right"):
-                    out.add(("hat", a))
-                elif game.target(a, slot) in VPAD_OUT:
-                    out.add(VPAD_OUT[game.target(a, slot)])
-            return out
-        km = KEYMAP[slot]
-        slot_of = {b: "b%d" % (i + 1) for i, b in enumerate(game.button_ids)}
-        return {("key", km[slot_of.get(a, a)][0]) for a in acts if slot_of.get(a, a) in km}
+        return backends.get(self.game.backend_type).targets(self.game, slot, acts)
 
     def set_output(self, enabled):
         with self.lock:
@@ -343,7 +334,7 @@ class Hub:
             pad.slot = slot
             self._output(pad)
             if not quiet:
-                self.log("%s → %s" % (self.label(pad), "P%d" % (slot + 1) if slot is not None else "banco"))
+                self.log(t("log.assigned", pad=self.label(pad), where="P%d" % (slot + 1) if slot is not None else t("bench")))
             self.bump()
 
     def swap(self):
@@ -356,22 +347,22 @@ class Hub:
                     self.pads[key].slot = s
                     self._output(self.pads[key])
             names = ["%s=P%d" % (self.label(self.pads[k]), i + 1) for i, k in enumerate(self.slots) if k]
-            self.log("Trocou de lado: " + (", ".join(names) or "ninguém"))
+            self.log(t("log.swapped", who=", ".join(names) or t("nobody")))
 
     def start_wizard(self, pad):
         with self.lock:
             if pad.slot is not None:
                 self._release_slot(pad.slot)
             pad.wizard = Wizard(self.game, wait_release=bool(pad.raw_buttons()))
-            self.log("Mapeando %s no %s: aperte %s" % (self.label(pad), self.game.short,
-                                                       self.game.label(pad.wizard.step)))
+            self.log(t("log.mapping", pad=self.label(pad), game=self.game.short,
+                       button=self.game.label(pad.wizard.step)))
 
     def cancel_wizard(self, pad):
         with self.lock:
             if pad.wizard is None:
                 return
             pad.wizard = None
-            self.log("Mapeamento de %s cancelado" % self.label(pad))
+            self.log(t("log.mapping_cancelled", pad=self.label(pad)))
 
     # --- perfis: controle x pessoa x jogo --------------------------------------
 
@@ -419,20 +410,20 @@ class Hub:
             pad.player = name
             self.store.controller(pad.pid)["jogador"] = name
             if not name:
-                self.log("%s sem jogador" % pad.name)
+                self.log(t("log.no_player", pad=pad.name))
             else:
                 pg = self.store.player_game(name, self.game.id)
                 knows = pg and ((pg.get("layout") and positions(pad.dev) is not None)
                                 or pg["modelos"].get(pad.model))
                 if knows:
                     self._apply(pad)
-                    self.log("%s pegou o %s: layout dele(a) no %s" % (name, pad.name, self.game.short))
+                    self.log(t("log.player_layout", player=name, pad=pad.name, game=self.game.short))
                 else:
                     # Pessoa nova (ou sem nada pra esse jogo): o layout atual vira o dela.
                     if pad.mapping:
                         self._save_for_player(pad, pad.mapping)
                         pad.kind = "player"
-                    self.log("%s: layout salvo pro %s" % (name, self.game.short))
+                    self.log(t("log.player_saved", player=name, game=self.game.short))
                 self.store.touch_player(name)
             self.store.save()
             self.bump()
@@ -446,7 +437,7 @@ class Hub:
                 pg["modelos"].pop(pad.model, None)
             self.store.save()
             self._apply(pad)
-            self.log("%s voltou pro layout padrão do %s" % (self.label(pad), self.game.short))
+            self.log(t("log.reset", pad=self.label(pad), game=self.game.short))
 
     def set_game(self, game_id):
         with self.lock:
@@ -457,7 +448,7 @@ class Hub:
             self.store.save()
             for pad in self.pads.values():
                 self._apply(pad)
-            self.log("Jogo: %s" % self.game.title)
+            self.log(t("log.game", game=self.game.title))
 
     # --- loop de input --------------------------------------------------------
 
@@ -483,7 +474,7 @@ class Hub:
                 self.store.save()
                 pad.set_mapping(mapping, "player" if pad.player else "custom")
                 pad.actions = pad.compute_actions()
-                self.log("%s mapeado!" % self.label(pad))
+                self.log(t("log.mapped", pad=self.label(pad)))
                 self._output(pad)
             elif w.idx != before or w.message:
                 self.bump()
