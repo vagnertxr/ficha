@@ -39,6 +39,10 @@ jobs:
         with:
           python-version: "3.12"
       - name: Dependências
+        env:
+          # O setup.py do vgamepad abre o instalador do driver ViGEmBus e espera um clique;
+          # no CI não tem ninguém pra clicar. Quem usa o ficha instala o driver à parte.
+          VGAMEPAD_SKIP_VIGEMBUS_INSTALL: "true"
         run: python -m pip install pyinstaller pysdl2 pysdl2-dll vgamepad
       - name: ficha.exe (PyInstaller)
         run: >
