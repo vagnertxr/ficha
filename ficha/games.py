@@ -9,13 +9,13 @@ Formato: veja docs/adding-a-game.md. Posições físicas usadas em [layout]
 """
 
 import glob
+import importlib.resources
 import os
 import sys
 import tomllib
 
 from . import config, i18n
 
-BUILTIN_DIR = os.path.join(os.path.dirname(__file__), "games")
 POSITIONS = {"west", "north", "south", "east", "r1", "l1", "r2", "l2", "start", "select", "l3", "r3"}
 SYSTEM_LABELS = {"start": "START", "coin": "COIN / SELECT"}
 
@@ -130,19 +130,31 @@ class Game:
                 "grid": self.grid, "macros": {k: v[1] for k, v in self.macros.items()}}
 
 
+def _sources():
+    """(nome, bytes) dos TOML embutidos (via importlib.resources, que funciona
+    também dentro de um .pyz ou do .exe) e depois os do usuário."""
+    builtin = importlib.resources.files("ficha").joinpath("games")
+    for res in sorted(builtin.iterdir(), key=lambda r: r.name):
+        if res.name.endswith(".toml"):
+            yield "ficha/games/" + res.name, res.read_bytes
+    for path in sorted(glob.glob(os.path.join(config.config_dir(), "games", "*.toml"))):
+        def read(path=path):
+            with open(path, "rb") as f:
+                return f.read()
+        yield path, read
+
+
 def load_all():
     from . import backends
     games = {}
-    for folder in (BUILTIN_DIR, os.path.join(config.config_dir(), "games")):
-        for path in sorted(glob.glob(os.path.join(folder, "*.toml"))):
-            try:
-                with open(path, "rb") as f:
-                    game = Game(tomllib.load(f), path)
-                backends.get(game.backend_type)   # backend existe?
-            except (OSError, tomllib.TOMLDecodeError, GameError, KeyError) as e:
-                print("ficha: ignorando jogo %s: %s" % (path, e), file=sys.stderr)
-                continue
-            games[game.id] = game
+    for path, read in _sources():
+        try:
+            game = Game(tomllib.loads(read().decode("utf-8")), path)
+            backends.get(game.backend_type)   # backend existe?
+        except (OSError, UnicodeDecodeError, tomllib.TOMLDecodeError, GameError, KeyError) as e:
+            print("ficha: ignorando jogo %s: %s" % (path, e), file=sys.stderr)
+            continue
+        games[game.id] = game
     return games
 
 

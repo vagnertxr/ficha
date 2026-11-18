@@ -4,12 +4,12 @@ Os textos ficam em ficha/locales/<idioma>.json. t("chave", nome=...) devolve o
 texto no idioma atual; chave sem tradução cai pro português e, por fim, pra própria chave.
 """
 
+import importlib.resources
 import json
 import locale
 import os
 
 LANGS = ("pt", "en")
-_DIR = os.path.join(os.path.dirname(__file__), "locales")
 _cache = {}
 _lang = None
 
@@ -40,8 +40,8 @@ def lang():
 def table(code=None):
     code = code or lang()
     if code not in _cache:
-        with open(os.path.join(_DIR, code + ".json"), encoding="utf-8") as f:
-            _cache[code] = json.load(f)
+        res = importlib.resources.files("ficha").joinpath("locales", code + ".json")
+        _cache[code] = json.loads(res.read_text(encoding="utf-8"))
     return _cache[code]
 
 

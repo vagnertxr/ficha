@@ -1,5 +1,6 @@
 """Painel local: HTML + Server-Sent Events + API JSON, só stdlib."""
 
+import importlib.resources
 import json
 import os
 import re
@@ -13,7 +14,9 @@ from .games import GAMES
 from .i18n import t
 from .fileio import read_bytes
 
-UI = os.path.join(os.path.dirname(__file__), "ui", "index.html")
+def ui_html():
+    return importlib.resources.files("ficha").joinpath("ui", "index.html").read_bytes()
+
 ART_RE = re.compile(r"^/art/[a-z0-9_-]+\.jpg$")
 
 
@@ -146,7 +149,7 @@ class Panel:
 
             def do_GET(self):
                 if self.path in ("/", "/index.html"):
-                    self._send(200, read_bytes(UI), "text/html; charset=utf-8")
+                    self._send(200, ui_html(), "text/html; charset=utf-8")
                 elif self.path == "/i18n.json":
                     self._send(200, json.dumps({"lang": i18n.lang(), "t": i18n.table()}))
                 elif ART_RE.match(self.path):
