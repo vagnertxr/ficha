@@ -37,6 +37,10 @@ ficha **does not include or download games or ROMs.** Use your own legally obtai
 
 ## Install
 
+**Easiest:** grab a file from the [latest release](https://github.com/vagnertxr/ficha/releases/latest):
+- **Linux:** `ficha.pyz`, a single file with no dependencies. Run it with `python3 ficha.pyz`.
+- **Windows (experimental):** `ficha-windows-x64.exe`.
+
 ### Linux (tested on Arch, GNOME/Wayland)
 
 ```bash

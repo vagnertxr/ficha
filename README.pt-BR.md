@@ -37,6 +37,10 @@ O ficha **não inclui nem baixa jogos ou ROMs.** Use as suas cópias, obtidas le
 
 ## Instalação
 
+**O jeito mais fácil:** baixe um arquivo da [última release](https://github.com/vagnertxr/ficha/releases/latest):
+- **Linux:** `ficha.pyz`, um arquivo só, sem dependências. Rode com `python3 ficha.pyz`.
+- **Windows (experimental):** `ficha-windows-x64.exe`.
+
 ### Linux (testado no Arch, GNOME/Wayland)
 
 ```bash
